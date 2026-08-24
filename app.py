@@ -548,7 +548,7 @@ with tab4:
         with e1:
             st.markdown("##### 📝 Microsoft Word (.docx)")
             st.caption("Полнотекстовая ПЗ с исходными данными, составом отходов и формулами.")
-            docx_p = generate_word_report(
+            docx_data = generate_word_report(
                 liq_calc=st.session_state['liq_calc'],
                 tbo_calc=st.session_state['tbo_calc'],
                 comb_calc=st.session_state['comb_calc'],
@@ -556,20 +556,19 @@ with tab4:
                 tbo_feed=st.session_state['tbo_feed'],
                 params=st.session_state['params']
             )
-            with open(docx_p, "rb") as f_d:
-                st.download_button(
-                    label="📥 Скачать отчет Word (.docx)",
-                    data=f_d,
-                    file_name=f"ПЗ_Расход_NaOH_{datetime.now().strftime('%Y%m%d_%H%M')}.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    use_container_width=True,
-                    type="primary"
-                )
+            st.download_button(
+                label="📥 Скачать отчет Word (.docx)",
+                data=docx_data,
+                file_name=f"ПЗ_Расход_NaOH_{datetime.now().strftime('%Y%m%d_%H%M')}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                use_container_width=True,
+                type="primary"
+            )
                 
         with e2:
             st.markdown("##### 📑 Документ PDF (.pdf)")
             st.caption("Инженерная справка с формулами, исходными данными и сводкой.")
-            pdf_p = generate_pdf_report(
+            pdf_data = generate_pdf_report(
                 liq_calc=st.session_state['liq_calc'],
                 tbo_calc=st.session_state['tbo_calc'],
                 comb_calc=st.session_state['comb_calc'],
@@ -577,20 +576,19 @@ with tab4:
                 tbo_feed=st.session_state['tbo_feed'],
                 params=st.session_state['params']
             )
-            with open(pdf_p, "rb") as f_p:
-                st.download_button(
-                    label="📥 Скачать отчет PDF (.pdf)",
-                    data=f_p,
-                    file_name=f"ПЗ_Расход_NaOH_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
-                    mime="application/pdf",
-                    use_container_width=True,
-                    type="secondary"
-                )
+            st.download_button(
+                label="📥 Скачать отчет PDF (.pdf)",
+                data=pdf_data,
+                file_name=f"ПЗ_Расход_NaOH_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+                type="secondary"
+            )
                 
         with e3:
             st.markdown("##### 📊 Таблица Excel (.xlsx)")
             st.caption("Книга Excel: Сводка, Исходные данные и формулы, Балансы, Морфология.")
-            xlsx_p = generate_excel_report(
+            xlsx_data = generate_excel_report(
                 liq_calc=st.session_state['liq_calc'],
                 tbo_calc=st.session_state['tbo_calc'],
                 comb_calc=st.session_state['comb_calc'],
@@ -598,14 +596,13 @@ with tab4:
                 tbo_feed=st.session_state['tbo_feed'],
                 params=st.session_state['params']
             )
-            with open(xlsx_p, "rb") as f_x:
-                st.download_button(
-                    label="📥 Скачать таблицу Excel (.xlsx)",
-                    data=f_x,
-                    file_name=f"Материальный_баланс_NaOH_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True
-                )
+            st.download_button(
+                label="📥 Скачать таблицу Excel (.xlsx)",
+                data=xlsx_data,
+                file_name=f"Материальный_баланс_NaOH_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True
+            )
                 
         st.markdown("---")
         

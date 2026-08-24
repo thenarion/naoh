@@ -458,14 +458,13 @@ def generate_word_report(
         f"   • Средневзвешенный удельный расход по комплексу: {comb_calc['spec_naoh_pure_g_per_kg']:.1f} г 100% NaOH / кг суммарных отходов."
     )
     
-    if output_path is None:
-        reports_dir = Path("reports")
-        reports_dir.mkdir(exist_ok=True)
-        filename = f"ПЗ_Расход_NaOH_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx"
-        output_path = str(reports_dir / filename)
-        
-    doc.save(output_path)
-    return output_path
+    if output_path is not None:
+        doc.save(output_path)
+        return output_path
+    else:
+        buf = io.BytesIO()
+        doc.save(buf)
+        return buf.getvalue()
 
 
 def generate_pdf_report(
@@ -813,14 +812,11 @@ def generate_pdf_report(
                           f"   • Годовой расход чистого 100% NaOH: {comb_calc['naoh_pure_year_t']:.2f} т/год;\n"
                           f"   • Средневзвешенный удельный расход по комплексу: {comb_calc['spec_naoh_pure_g_per_kg']:.1f} г 100% NaOH / кг суммарных отходов.")
     
-    if output_path is None:
-        reports_dir = Path("reports")
-        reports_dir.mkdir(exist_ok=True)
-        filename = f"ПЗ_Расход_NaOH_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
-        output_path = str(reports_dir / filename)
-        
-    pdf.output(output_path)
-    return output_path
+    if output_path is not None:
+        pdf.output(output_path)
+        return output_path
+    else:
+        return bytes(pdf.output())
 
 
 def generate_excel_report(
@@ -831,17 +827,13 @@ def generate_excel_report(
     tbo_feed: Dict[str, Any],
     params: Dict[str, Any],
     output_path: str = None
-) -> str:
+) -> Any:
     """
     Генерация Excel-файла с листами: Сводка, Исходные данные и формулы, Жидкие отходы, ТБО, Морфология ТБО.
+    Возвращает байты (in-memory) или сохраняет по указанному пути.
     """
-    if output_path is None:
-        reports_dir = Path("reports")
-        reports_dir.mkdir(exist_ok=True)
-        filename = f"Материальный_баланс_NaOH_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-        output_path = str(reports_dir / filename)
-        
-    with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
+    buf = io.BytesIO() if output_path is None else output_path
+    with pd.ExcelWriter(buf, engine='openpyxl') as writer:
         # Лист 1: Сводные показатели
         df_summary = pd.DataFrame([
             {
@@ -911,4 +903,7 @@ def generate_excel_report(
             df_morph = pd.DataFrame(tbo_feed["breakdown_table"])
             df_morph.to_excel(writer, sheet_name="Морфология ТБО", index=False)
             
-    return output_path
+    if output_path is not None:
+        return output_path
+    else:
+        return buf.getvalue()
