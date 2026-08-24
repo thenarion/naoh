@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+test_*.pdf
+test_*.docx
+test_*.xlsx
+test_*.png
+.streamlit/
+*.log
