@@ -12,6 +12,9 @@ from pathlib import Path
 import os
 import io
 import pandas as pd
+
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 from docx import Document
@@ -84,19 +87,40 @@ def add_visual_formula_block_docx(doc, title: str, latex_math_str: str, descript
 class DetailedEngineeringPDF(FPDF):
     def __init__(self):
         super().__init__(orientation='P', unit='mm', format='A4')
-        self.font_regular = "ArialCyr"
+        self.font_regular = "CyrillicFont"
         
-        # Регистрация системных шрифтов Windows
-        if os.path.exists("C:/Windows/Fonts/arial.ttf"):
-            self.add_font("ArialCyr", "", "C:/Windows/Fonts/arial.ttf")
-            self.add_font("ArialCyr", "B", "C:/Windows/Fonts/arialbd.ttf")
-            self.add_font("ArialCyr", "I", "C:/Windows/Fonts/ariali.ttf")
-            self.add_font("ArialCyr", "BI", "C:/Windows/Fonts/arialbi.ttf")
-        else:
+        # Кроссплатформенный поиск TTF шрифтов с поддержкой кириллицы (Windows, Linux, Streamlit Cloud)
+        font_candidates = [
+            # Windows
+            ("C:/Windows/Fonts/arial.ttf", "C:/Windows/Fonts/arialbd.ttf", "C:/Windows/Fonts/ariali.ttf", "C:/Windows/Fonts/arialbi.ttf"),
+            ("C:/Windows/Fonts/calibri.ttf", "C:/Windows/Fonts/calibrib.ttf", "C:/Windows/Fonts/calibrii.ttf", "C:/Windows/Fonts/calibriz.ttf"),
+            # Linux / Debian / Ubuntu / Streamlit Cloud
+            ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-BoldOblique.ttf"),
+            ("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-BoldItalic.ttf"),
+            ("/usr/share/fonts/truetype/freefont/FreeSans.ttf", "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf", "/usr/share/fonts/truetype/freefont/FreeSansOblique.ttf", "/usr/share/fonts/truetype/freefont/FreeSansBoldOblique.ttf"),
+        ]
+        
+        font_found = False
+        for reg, bold, italic, bold_italic in font_candidates:
+            if os.path.exists(reg):
+                self.add_font("CyrillicFont", "", reg)
+                self.add_font("CyrillicFont", "B", bold if os.path.exists(bold) else reg)
+                self.add_font("CyrillicFont", "I", italic if os.path.exists(italic) else reg)
+                self.add_font("CyrillicFont", "BI", bold_italic if os.path.exists(bold_italic) else reg)
+                font_found = True
+                break
+                
+        if not font_found:
+            # Если системные TTF шрифты отсутствуют, используем встроенную поддержку
+            try:
+                self.set_fallback_fonts(["Helvetica"])
+            except Exception:
+                pass
             self.font_regular = "Helvetica"
             
         self.set_margins(left=15, top=15, right=15)
         self.set_auto_page_break(auto=True, margin=15)
+
         
     def header(self):
         if self.page_no() > 1:
