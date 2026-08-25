@@ -123,8 +123,8 @@ with st.sidebar.expander("🏭 Параметры скруббера", expanded=
     )
 
 with st.sidebar.expander("🔥 Степень конверсии в газ", expanded=False):
-    k_conv_cl = st.slider("Конверсия Cl → HCl", 0.85, 0.99, 0.98, 0.01)
-    k_conv_s = st.slider("Конверсия S → SO₂", 0.75, 0.99, 0.90, 0.01)
+    k_conv_cl = st.slider("Конверсия Cl → HCl", min_value=0.0, max_value=1.0, value=0.98, step=0.01, help="Доля хлора, переходящая в HCl при термическом разложении (от 0.0 до 1.0)")
+    k_conv_s = st.slider("Конверсия S → SO₂", min_value=0.0, max_value=1.0, value=0.90, step=0.01, help="Доля серы, переходящая в SO₂ при окислении (от 0.0 до 1.0)")
 
 # ==============================================================================
 # ОСНОВНЫЕ ВКЛАДКИ
@@ -470,7 +470,9 @@ with tab3:
         'operating_days_year': operating_days_year,
         'annual_hours': annual_hours,
         'eta_scrubber': eta_scrubber,
-        'k_excess': k_excess
+        'k_excess': k_excess,
+        'k_conv_cl': k_conv_cl,
+        'k_conv_s': k_conv_s
     }
     
     st.markdown(f"**График работы:** {hours_per_day:.0f} ч/сутки • {operating_days_year:.0f} рабочих дней в году • Общий фонд: **{annual_hours:.0f} ч/год**")

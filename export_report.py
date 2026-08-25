@@ -235,7 +235,7 @@ def generate_word_report(
         f"• Выбранный расчетный режим: {params['dataset_name']} (СП 320.1325800.2017, Таблица Г.1);\n"
         f"• Концентрация хлоридов (Cl⁻): {params['c_cl_liq']:.1f} мг/дм³  ->  Поступление Cl = {liquid_feed['mass_cl']:.3f} кг/ч;\n"
         f"• Концентрация сульфатов (SO₄²⁻): {params['c_so4_liq']:.1f} мг/дм³  ->  Поступление S = {liquid_feed['mass_s']:.3f} кг/ч;\n"
-        f"• Коэффициенты конверсии в кислые газы: k_конв,Cl = 0.98 (Cl → HCl), k_конв,S = 0.90 (S → SO₂)."
+        f"• Коэффициенты конверсии в кислые газы: k_конв,Cl = {params.get('k_conv_cl', 0.98):.2f} (Cl → HCl), k_конв,S = {params.get('k_conv_s', 0.90):.2f} (S → SO₂)."
     )
     
     # 1.2 Состав ТБО
@@ -277,18 +277,21 @@ def generate_word_report(
     h2 = doc.add_heading("2. Методика и расчетные формулы", level=1)
     h2.paragraph_format.space_before = Pt(8)
     
+    k_c_cl = params.get('k_conv_cl', 0.98)
+    k_c_s = params.get('k_conv_s', 0.90)
+    
     add_visual_formula_block_docx(
         doc,
         title="2.1. Образование хлороводорода (HCl) при термическом разложении",
-        latex_math_str=r'$M_{\mathrm{HCl}} = M_{\mathrm{Cl}} \cdot k_{\mathrm{conv,Cl}} \cdot \frac{\mu_{\mathrm{HCl}}}{\mu_{\mathrm{Cl}}} = M_{\mathrm{Cl}} \cdot 0.98 \cdot \frac{36.461}{35.453} \approx M_{\mathrm{Cl}} \cdot 1.0078 \quad [\mathrm{kg/h}]$',
-        description="где M_Cl — часовое поступление хлора в отходах (кг/ч); μ_HCl = 36.461 г/моль; μ_Cl = 35.453 г/моль; k_conv,Cl = 0.98."
+        latex_math_str=rf'$M_{{\mathrm{{HCl}}}} = M_{{\mathrm{{Cl}}}} \cdot k_{{\mathrm{{conv,Cl}}}} \cdot \frac{{\mu_{{\mathrm{{HCl}}}}}}{{\mu_{{\mathrm{{Cl}}}}}} = M_{{\mathrm{{Cl}}}} \cdot {k_c_cl:.2f} \cdot \frac{{36.461}}{{35.453}} \approx M_{{\mathrm{{Cl}}}} \cdot {k_c_cl * (36.461/35.453):.4f} \quad [\mathrm{{kg/h}}]$',
+        description=f"где M_Cl — часовое поступление хлора в отходах (кг/ч); μ_HCl = 36.461 г/моль; μ_Cl = 35.453 г/моль; k_conv,Cl = {k_c_cl:.2f}."
     )
     
     add_visual_formula_block_docx(
         doc,
         title="2.2. Образование диоксида серы (SO₂) при окислении серы",
-        latex_math_str=r'$M_{\mathrm{SO}_2} = M_{\mathrm{S}} \cdot k_{\mathrm{conv,S}} \cdot \frac{\mu_{\mathrm{SO}_2}}{\mu_{\mathrm{S}}} = M_{\mathrm{S}} \cdot 0.90 \cdot \frac{64.063}{32.065} \approx M_{\mathrm{S}} \cdot 1.7981 \quad [\mathrm{kg/h}]$',
-        description="где M_S — поступление серы (кг/ч); μ_SO2 = 64.063 г/моль; μ_S = 32.065 г/моль; k_conv,S = 0.90."
+        latex_math_str=rf'$M_{{\mathrm{{SO}}_2}} = M_{{\mathrm{{S}}}} \cdot k_{{\mathrm{{conv,S}}}} \cdot \frac{{\mu_{{\mathrm{{SO}}_2}}}}{{\mu_{{\mathrm{{S}}}}}} = M_{{\mathrm{{S}}}} \cdot {k_c_s:.2f} \cdot \frac{{64.063}}{{32.065}} \approx M_{{\mathrm{{S}}}} \cdot {k_c_s * (64.063/32.065):.4f} \quad [\mathrm{{kg/h}}]$',
+        description=f"где M_S — поступление серы (кг/ч); μ_SO2 = 64.063 г/моль; μ_S = 32.065 г/моль; k_conv,S = {k_c_s:.2f}."
     )
     
     add_visual_formula_block_docx(
@@ -581,7 +584,7 @@ def generate_pdf_report(
                           f"• Выбранный расчетный режим: {params['dataset_name']} (СП 320.1325800.2017, Таблица Г.1);\n"
                           f"• Концентрация хлоридов (Cl-): {params['c_cl_liq']:.1f} мг/дм3  ->  Поступление Cl = {liquid_feed['mass_cl']:.3f} кг/ч;\n"
                           f"• Концентрация сульфатов (SO4(2-)): {params['c_so4_liq']:.1f} мг/дм3  ->  Поступление S = {liquid_feed['mass_s']:.3f} кг/ч;\n"
-                          f"• Коэффициенты конверсии в кислые газы: k_конв,Cl = 0.98 (Cl -> HCl), k_конв,S = 0.90 (S -> SO2).")
+                          f"• Коэффициенты конверсии в кислые газы: k_конв,Cl = {params.get('k_conv_cl', 0.98):.2f} (Cl -> HCl), k_конв,S = {params.get('k_conv_s', 0.90):.2f} (S -> SO2).")
     pdf.ln(2)
     
     # 1.2 ТБО
@@ -626,19 +629,23 @@ def generate_pdf_report(
     pdf.cell(0, 6, "2. Методика и расчетные формулы", ln=True)
     pdf.ln(1)
     
+    k_c_cl = params.get('k_conv_cl', 0.98)
+    k_c_s = params.get('k_conv_s', 0.90)
+    
     full_formulas_list = [
         (
             "2.1. Образование хлороводорода (HCl) при термическом разложении",
-            r'$M_{\mathrm{HCl}} = M_{\mathrm{Cl}} \cdot k_{\mathrm{conv,Cl}} \cdot \frac{\mu_{\mathrm{HCl}}}{\mu_{\mathrm{Cl}}} = M_{\mathrm{Cl}} \cdot 0.98 \cdot \frac{36.461}{35.453} \approx M_{\mathrm{Cl}} \cdot 1.0078 \quad [\mathrm{kg/h}]$',
-            "где M_Cl — часовое поступление хлора в отходах (кг/ч); μ_HCl = 36.461 г/моль; μ_Cl = 35.453 г/моль; k_conv,Cl = 0.98.",
+            rf'$M_{{\mathrm{{HCl}}}} = M_{{\mathrm{{Cl}}}} \cdot k_{{\mathrm{{conv,Cl}}}} \cdot \frac{{\mu_{{\mathrm{{HCl}}}}}}{{\mu_{{\mathrm{{Cl}}}}}} = M_{{\mathrm{{Cl}}}} \cdot {k_c_cl:.2f} \cdot \frac{{36.461}}{{35.453}} \approx M_{{\mathrm{{Cl}}}} \cdot {k_c_cl * (36.461/35.453):.4f} \quad [\mathrm{{kg/h}}]$',
+            f"где M_Cl — часовое поступление хлора в отходах (кг/ч); μ_HCl = 36.461 г/моль; μ_Cl = 35.453 г/моль; k_conv,Cl = {k_c_cl:.2f}.",
             155
         ),
         (
             "2.2. Образование диоксида серы (SO2) при окислении серы",
-            r'$M_{\mathrm{SO}_2} = M_{\mathrm{S}} \cdot k_{\mathrm{conv,S}} \cdot \frac{\mu_{\mathrm{SO}_2}}{\mu_{\mathrm{S}}} = M_{\mathrm{S}} \cdot 0.90 \cdot \frac{64.063}{32.065} \approx M_{\mathrm{S}} \cdot 1.7981 \quad [\mathrm{kg/h}]$',
-            "где M_S — поступление серы (кг/ч); μ_SO2 = 64.063 г/моль; μ_S = 32.065 г/моль; k_conv,S = 0.90.",
+            rf'$M_{{\mathrm{{SO}}_2}} = M_{{\mathrm{{S}}}} \cdot k_{{\mathrm{{conv,S}}}} \cdot \frac{{\mu_{{\mathrm{{SO}}_2}}}}{{\mu_{{\mathrm{{S}}}}}} = M_{{\mathrm{{S}}}} \cdot {k_c_s:.2f} \cdot \frac{{64.063}}{{32.065}} \approx M_{{\mathrm{{S}}}} \cdot {k_c_s * (64.063/32.065):.4f} \quad [\mathrm{{kg/h}}]$',
+            f"где M_S — поступление серы (кг/ч); μ_SO2 = 64.063 г/моль; μ_S = 32.065 г/моль; k_conv,S = {k_c_s:.2f}.",
             155
         ),
+
         (
             "2.3. Поступление серы из сульфат-ионов жидких отходов",
             r'$M_{\mathrm{S}} = Q_{\mathrm{liq}} \cdot C_{\mathrm{SO}_4} \cdot \frac{32.065}{96.061} \cdot 10^{-3} \quad [\mathrm{kg/h}]$',
@@ -902,7 +909,9 @@ def generate_excel_report(
             {"Категория": "ТБО", "Параметр": "Среднее содержание Cl в ТБО", "Значение": round(tbo_feed["avg_pct_cl"], 3), "Ед. изм.": "%", "Формула / Примечание": "M_Cl = M_ТБО * (Cl%/100)"},
             {"Категория": "ТБО", "Параметр": "Среднее содержание S в ТБО", "Значение": round(tbo_feed["avg_pct_s"], 3), "Ед. изм.": "%", "Формула / Примечание": "M_S = M_ТБО * (S%/100)"},
             {"Категория": "Стехиометрия", "Параметр": "HCl + NaOH -> NaCl + H2O", "Значение": 1.0970, "Ед. изм.": "кг NaOH / кг HCl", "Формула / Примечание": "μ_NaOH / μ_HCl = 39.997 / 36.461"},
-            {"Категория": "Стехиометрия", "Параметр": "SO2 + 2NaOH -> Na2SO3 + H2O", "Значение": 1.2487, "Ед. изм.": "кг NaOH / кг SO2", "Формула / Примечание": "2*μ_NaOH / μ_SO2 = 79.994 / 64.063"}
+            {"Категория": "Стехиометрия", "Параметр": "SO2 + 2NaOH -> Na2SO3 + H2O", "Значение": 1.2487, "Ед. изм.": "кг NaOH / кг SO2", "Формула / Примечание": "2*μ_NaOH / μ_SO2 = 79.994 / 64.063"},
+            {"Категория": "Конверсия в газ", "Параметр": "Конверсия хлора в HCl (k_конв,Cl)", "Значение": params.get("k_conv_cl", 0.98), "Ед. изм.": "д.ед.", "Формула / Примечание": "Доля перехода Cl -> HCl (0.0 - 1.0)"},
+            {"Категория": "Конверсия в газ", "Параметр": "Конверсия серы в SO2 (k_конв,S)", "Значение": params.get("k_conv_s", 0.90), "Ед. изм.": "д.ед.", "Формула / Примечание": "Доля перехода S -> SO2 (0.0 - 1.0)"}
         ])
         df_inputs.to_excel(writer, sheet_name="Исходные данные и формулы", index=False)
         
