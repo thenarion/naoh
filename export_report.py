@@ -338,9 +338,9 @@ def generate_word_report(
     
     add_visual_formula_block_docx(
         doc,
-        title="2.5. Теоретический расход NaOH на нейтрализацию уловленного HCl (ИТС 9-2020)",
-        latex_math_str=r'$M_{\mathrm{NaOH, theor(HCl)}} = M_{\mathrm{HCl}} \cdot \eta_{\mathrm{req,HCl}} \cdot \frac{\mu_{\mathrm{NaOH}}}{\mu_{\mathrm{HCl}}} \approx M_{\mathrm{HCl}} \cdot \eta_{\mathrm{req,HCl}} \cdot 1.0970 \quad [\mathrm{kg/h}]$',
-        description=f"где η_req,HCl = max(0, 1 - 10/C_вх,HCl) — требуемая степень очистки для достижения ПДК HCl ≤ 10 мг/нм³ при расходе газов V_г = {flue_gas_flow:.0f} нм³/ч."
+        title="2.5. Теоретический расход NaOH на нейтрализацию уловленного HCl",
+        latex_math_str=r'$M_{\mathrm{NaOH, theor(HCl)}} = M_{\mathrm{HCl}} \cdot \eta_{\mathrm{scrubber}} \cdot \frac{\mu_{\mathrm{NaOH}}}{\mu_{\mathrm{HCl}}} \approx M_{\mathrm{HCl}} \cdot \eta_{\mathrm{scrubber}} \cdot 1.0970 \quad [\mathrm{kg/h}]$',
+        description=f"где η_скр = {params['eta_scrubber']:.2f} — паспортная степень улавливания скруббера (реагирует только уловленная масса)."
     )
     
     add_visual_formula_block_docx(
@@ -352,24 +352,25 @@ def generate_word_report(
     
     add_visual_formula_block_docx(
         doc,
-        title="2.7. Теоретический расход NaOH на нейтрализацию уловленного SO₂ (ИТС 9-2020)",
-        latex_math_str=r'$M_{\mathrm{NaOH, theor(SO}_2\mathrm{)}} = M_{\mathrm{SO}_2} \cdot \eta_{\mathrm{req,SO}_2} \cdot \frac{2 \cdot \mu_{\mathrm{NaOH}}}{\mu_{\mathrm{SO}_2}} \approx M_{\mathrm{SO}_2} \cdot \eta_{\mathrm{req,SO}_2} \cdot 1.2487 \quad [\mathrm{kg/h}]$',
-        description=f"где η_req,SO2 = max(0, 1 - 50/C_вх,SO2) — требуемая степень очистки для достижения ПДК SO₂ ≤ 50 мг/нм³ при расходе газов V_г = {flue_gas_flow:.0f} нм³/ч."
+        title="2.7. Теоретический расход NaOH на нейтрализацию уловленного SO₂",
+        latex_math_str=r'$M_{\mathrm{NaOH, theor(SO}_2\mathrm{)}} = M_{\mathrm{SO}_2} \cdot \eta_{\mathrm{scrubber}} \cdot \frac{2 \cdot \mu_{\mathrm{NaOH}}}{\mu_{\mathrm{SO}_2}} \approx M_{\mathrm{SO}_2} \cdot \eta_{\mathrm{scrubber}} \cdot 1.2487 \quad [\mathrm{kg/h}]$',
+        description=f"где η_скр = {params['eta_scrubber']:.2f} — паспортная степень улавливания скруббера."
     )
     
     add_visual_formula_block_docx(
         doc,
         title="2.8. Суммарный теоретический часовой расход чистого 100% NaOH",
         latex_math_str=r'$M_{\mathrm{NaOH, theor}} = M_{\mathrm{NaOH, theor(HCl)}} + M_{\mathrm{NaOH, theor(SO}_2\mathrm{)}} \quad [\mathrm{kg/h}]$',
-        description="суммарная теоретическая стехиометрическая потребность в щелочи для соблюдения ПДК ИТС 9-2020."
+        description="суммарная теоретическая потребность в щелочи на нейтрализацию уловленных газов."
     )
     
     add_visual_formula_block_docx(
         doc,
         title="2.9. Фактический часовой расход чистого 100% NaOH с учетом избытка",
-        latex_math_str=r'$M_{\mathrm{NaOH, fact}} = M_{\mathrm{NaOH, theor}} \cdot k_{\mathrm{excess}} = \left(M_{\mathrm{HCl}}\cdot\eta_{\mathrm{req,HCl}}\cdot 1.0970 + M_{\mathrm{SO}_2}\cdot\eta_{\mathrm{req,SO}_2}\cdot 1.2487\right) \cdot k_{\mathrm{excess}} \quad [\mathrm{kg/h}]$',
-        description=f"где k_изб = {params['k_excess']:.2f} — коэффициент технологического избытка реагента."
+        latex_math_str=r'$M_{\mathrm{NaOH, fact}} = M_{\mathrm{NaOH, theor}} \cdot k_{\mathrm{excess}} = \left(M_{\mathrm{HCl}}\cdot 1.0970 + M_{\mathrm{SO}_2}\cdot 1.2487\right) \cdot \eta_{\mathrm{scrubber}} \cdot k_{\mathrm{excess}} \quad [\mathrm{kg/h}]$',
+        description=f"где k_изб = {params['k_excess']:.2f} — коэффициент технологического избытка реагента (поддержание pH 7.5–8.5)."
     )
+
     
     add_visual_formula_block_docx(
         doc,
@@ -774,9 +775,9 @@ def generate_pdf_report(
             155
         ),
         (
-            "2.5. Теоретический расход NaOH на нейтрализацию уловленного HCl (ИТС 9-2020)",
-            r'$M_{\mathrm{NaOH, theor(HCl)}} = M_{\mathrm{HCl}} \cdot \eta_{\mathrm{req,HCl}} \cdot \frac{\mu_{\mathrm{NaOH}}}{\mu_{\mathrm{HCl}}} \approx M_{\mathrm{HCl}} \cdot \eta_{\mathrm{req,HCl}} \cdot 1.0970 \quad [\mathrm{kg/h}]$',
-            f"где η_req,HCl = max(0, 1 - 10/C_вх,HCl) — требуемая степень очистки для достижения ПДК HCl ≤ 10 мг/нм³ при расходе газов V_г = {flue_gas_flow:.0f} нм³/ч.",
+            "2.5. Теоретический расход NaOH на нейтрализацию уловленного HCl",
+            r'$M_{\mathrm{NaOH, theor(HCl)}} = M_{\mathrm{HCl}} \cdot \eta_{\mathrm{scrubber}} \cdot \frac{\mu_{\mathrm{NaOH}}}{\mu_{\mathrm{HCl}}} \approx M_{\mathrm{HCl}} \cdot \eta_{\mathrm{scrubber}} \cdot 1.0970 \quad [\mathrm{kg/h}]$',
+            f"где η_скр = {params['eta_scrubber']:.2f} — паспортная степень улавливания скруббера (реагирует только уловленная масса).",
             155
         ),
         (
@@ -786,23 +787,24 @@ def generate_pdf_report(
             155
         ),
         (
-            "2.7. Теоретический расход NaOH на нейтрализацию уловленного SO2 (ИТС 9-2020)",
-            r'$M_{\mathrm{NaOH, theor(SO}_2\mathrm{)}} = M_{\mathrm{SO}_2} \cdot \eta_{\mathrm{req,SO}_2} \cdot \frac{2 \cdot \mu_{\mathrm{NaOH}}}{\mu_{\mathrm{SO}_2}} \approx M_{\mathrm{SO}_2} \cdot \eta_{\mathrm{req,SO}_2} \cdot 1.2487 \quad [\mathrm{kg/h}]$',
-            f"где η_req,SO2 = max(0, 1 - 50/C_вх,SO2) — требуемая степень очистки для достижения ПДК SO₂ ≤ 50 мг/нм³ при расходе газов V_г = {flue_gas_flow:.0f} нм³/ч.",
+            "2.7. Теоретический расход NaOH на нейтрализацию уловленного SO2",
+            r'$M_{\mathrm{NaOH, theor(SO}_2\mathrm{)}} = M_{\mathrm{SO}_2} \cdot \eta_{\mathrm{scrubber}} \cdot \frac{2 \cdot \mu_{\mathrm{NaOH}}}{\mu_{\mathrm{SO}_2}} \approx M_{\mathrm{SO}_2} \cdot \eta_{\mathrm{scrubber}} \cdot 1.2487 \quad [\mathrm{kg/h}]$',
+            f"где η_скр = {params['eta_scrubber']:.2f} — паспортная степень улавливания скруббера.",
             155
         ),
         (
             "2.8. Суммарный теоретический часовой расход чистого 100% NaOH",
             r'$M_{\mathrm{NaOH, theor}} = M_{\mathrm{NaOH, theor(HCl)}} + M_{\mathrm{NaOH, theor(SO}_2\mathrm{)}} \quad [\mathrm{kg/h}]$',
-            "суммарная теоретическая стехиометрическая потребность в щелочи для соблюдения ПДК ИТС 9-2020.",
+            "суммарная теоретическая потребность в щелочи на нейтрализацию уловленных газов.",
             155
         ),
         (
             "2.9. Фактический часовой расход чистого 100% NaOH с учетом избытка",
-            r'$M_{\mathrm{NaOH, fact}} = M_{\mathrm{NaOH, theor}} \cdot k_{\mathrm{excess}} = \left(M_{\mathrm{HCl}}\cdot\eta_{\mathrm{req,HCl}}\cdot 1.0970 + M_{\mathrm{SO}_2}\cdot\eta_{\mathrm{req,SO}_2}\cdot 1.2487\right) \cdot k_{\mathrm{excess}} \quad [\mathrm{kg/h}]$',
-            f"где k_изб = {params['k_excess']:.2f} — коэффициент технологического избытка реагента.",
+            r'$M_{\mathrm{NaOH, fact}} = M_{\mathrm{NaOH, theor}} \cdot k_{\mathrm{excess}} = \left(M_{\mathrm{HCl}}\cdot 1.0970 + M_{\mathrm{SO}_2}\cdot 1.2487\right) \cdot \eta_{\mathrm{scrubber}} \cdot k_{\mathrm{excess}} \quad [\mathrm{kg/h}]$',
+            f"где k_изб = {params['k_excess']:.2f} — коэффициент технологического избытка реагента (поддержание pH 7.5–8.5).",
             155
         ),
+
 
         (
             "2.10. Суточный и годовой расход чистого 100% реагента",
