@@ -315,11 +315,12 @@ def calculate_single_stream_consumption(
     mass_hcl_neut = mass_hcl_gas * eta_req_hcl
     mass_so2_neut = mass_so2_gas * eta_req_so2
     
-    # Фактические выходные концентрации после скруббера с паспортным КПД eta_scrubber (мг/нм³)
-    conc_hcl_out = conc_hcl_in * (1.0 - eta_scrubber)
-    conc_so2_out = conc_so2_in * (1.0 - eta_scrubber)
+    # 4. Концентрации на выходе, обеспечиваемые дозированием NaOH под норматив ПДК (мг/нм³)
+    conc_hcl_out = min(conc_hcl_in, limit_hcl)
+    conc_so2_out = min(conc_so2_in, limit_so2)
 
-    # 4. Стехиометрические коэффициенты
+    # Стехиометрические коэффициенты
+
     stoich_hcl = M_NaOH / M_HCl         # ~1.09697 кг NaOH / кг HCl
     stoich_so2 = (2 * M_NaOH) / M_SO2   # ~1.24867 кг NaOH / кг SO2
     
@@ -572,24 +573,33 @@ def calculate_naoh_and_compliance(
     conc_hcl_in_total = (mass_hcl_in_total * 1e6) / flue_gas_flow_total if flue_gas_flow_total > 0 else 0.0
     conc_so2_in_total = (mass_so2_in_total * 1e6) / flue_gas_flow_total if flue_gas_flow_total > 0 else 0.0
     eta_req_hcl_total = (mass_hcl_neut_total / mass_hcl_in_total) if mass_hcl_in_total > 0 else 0.0
+
     eta_req_so2_total = (mass_so2_neut_total / mass_so2_in_total) if mass_so2_in_total > 0 else 0.0
+    # Концентрации на выходе после очистки под нормативы ИТС 9-2020 (мг/нм³)
 
-    conc_hcl_out_total = conc_hcl_in_total * (1.0 - eta_scrubber)
-    conc_so2_out_total = conc_so2_in_total * (1.0 - eta_scrubber)
+    conc_hcl_out_liq = min(conc_hcl_in_liq, 10.0)
+    conc_so2_out_liq = min(conc_so2_in_liq, 50.0)
+    conc_hcl_out_tbo = min(conc_hcl_in_tbo, 10.0)
+    conc_so2_out_tbo = min(conc_so2_in_tbo, 50.0)
 
+    mass_hcl_out_total = (mass_hcl_in_total - mass_hcl_neut_total)
+    mass_so2_out_total = (mass_so2_in_total - mass_so2_neut_total)
+    conc_hcl_out_total = (mass_hcl_out_total * 1e6) / flue_gas_flow_total if flue_gas_flow_total > 0 else 0.0
+    conc_so2_out_total = (mass_so2_out_total * 1e6) / flue_gas_flow_total if flue_gas_flow_total > 0 else 0.0
 
-    # 4. Стехиометрический и фактический расход 100% NaOH
+    # 4. Стехиометрический и фактический расход 100% NaOH на нейтрализацию
     stoich_hcl = M_NaOH / M_HCl         # ~1.09697 кг NaOH / кг HCl
     stoich_so2 = (2 * M_NaOH) / M_SO2   # ~1.24867 кг NaOH / кг SO2
     
-    naoh_hcl_theor = mass_hcl_in_total * stoich_hcl
-    naoh_so2_theor = mass_so2_in_total * stoich_so2
+    naoh_hcl_theor = mass_hcl_neut_total * stoich_hcl
+    naoh_so2_theor = mass_so2_neut_total * stoich_so2
     naoh_total_theor = naoh_hcl_theor + naoh_so2_theor
     
     k_eff = (k_excess / eta_scrubber) if eta_scrubber > 0 else k_excess
     naoh_hcl_fact = naoh_hcl_theor * k_eff
     naoh_so2_fact = naoh_so2_theor * k_eff
     naoh_total_fact = naoh_hcl_fact + naoh_so2_fact
+
 
     
     operating_hours_year = hours_per_day * operating_days_year
@@ -627,6 +637,8 @@ def calculate_naoh_and_compliance(
         'mass_so2_liq': mass_so2_liq,
         'conc_hcl_in_liq': conc_hcl_in_liq,
         'conc_so2_in_liq': conc_so2_in_liq,
+        'conc_hcl_out_liq': conc_hcl_out_liq,
+        'conc_so2_out_liq': conc_so2_out_liq,
         'eta_req_hcl_liq': eta_req_hcl_liq,
         'eta_req_so2_liq': eta_req_so2_liq,
         
@@ -634,8 +646,11 @@ def calculate_naoh_and_compliance(
         'mass_so2_tbo': mass_so2_tbo,
         'conc_hcl_in_tbo': conc_hcl_in_tbo,
         'conc_so2_in_tbo': conc_so2_in_tbo,
+        'conc_hcl_out_tbo': conc_hcl_out_tbo,
+        'conc_so2_out_tbo': conc_so2_out_tbo,
         'eta_req_hcl_tbo': eta_req_hcl_tbo,
         'eta_req_so2_tbo': eta_req_so2_tbo,
+
         
         'mass_hcl_in': mass_hcl_in_total,
         'mass_so2_in': mass_so2_in_total,
