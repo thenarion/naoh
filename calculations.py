@@ -307,14 +307,15 @@ def calculate_single_stream_consumption(
     conc_hcl_in = (mass_hcl_gas * 1e6) / flue_gas_flow if flue_gas_flow > 0 else 0.0
     conc_so2_in = (mass_so2_gas * 1e6) / flue_gas_flow if flue_gas_flow > 0 else 0.0
     
-    # 2. Требуемая степень очистки для выхода на предельные значения ИТС 9-2020
+    # 2. Требуемая степень очистки для достижения нормативов ИТС 9-2020 (HCl ≤ 10, SO2 ≤ 50 мг/нм³)
     eta_req_hcl = max(0.0, 1.0 - (limit_hcl / conc_hcl_in)) if conc_hcl_in > limit_hcl else 0.0
     eta_req_so2 = max(0.0, 1.0 - (limit_so2 / conc_so2_in)) if conc_so2_in > limit_so2 else 0.0
     
-    # 3. Масса кислых газов, улавливаемая в скруббере при паспортной эффективности eta_scrubber (кг/ч)
-    mass_hcl_neut = mass_hcl_gas * eta_scrubber
-    mass_so2_neut = mass_so2_gas * eta_scrubber
+    # 3. Масса кислых газов, подлежащая улавливанию для достижения нормативов ПДК (кг/ч)
+    mass_hcl_neut = mass_hcl_gas * eta_req_hcl
+    mass_so2_neut = mass_so2_gas * eta_req_so2
     
+    # Фактические выходные концентрации после скруббера с паспортным КПД eta_scrubber (мг/нм³)
     conc_hcl_out = conc_hcl_in * (1.0 - eta_scrubber)
     conc_so2_out = conc_so2_in * (1.0 - eta_scrubber)
 
@@ -322,17 +323,19 @@ def calculate_single_stream_consumption(
     stoich_hcl = M_NaOH / M_HCl         # ~1.09697 кг NaOH / кг HCl
     stoich_so2 = (2 * M_NaOH) / M_SO2   # ~1.24867 кг NaOH / кг SO2
     
-    # 5. Теоретический расход 100% NaOH на нейтрализацию кислых газов (кг/ч)
-    naoh_hcl_theor = mass_hcl_gas * stoich_hcl
-    naoh_so2_theor = mass_so2_gas * stoich_so2
+    # 5. Теоретический расход 100% NaOH на нейтрализацию уловленных газов (кг/ч)
+    naoh_hcl_theor = mass_hcl_neut * stoich_hcl
+    naoh_so2_theor = mass_so2_neut * stoich_so2
     naoh_total_theor = naoh_hcl_theor + naoh_so2_theor
     
     # 6. Фактический часовой расход 100% NaOH с учетом эффективности массообмена скруббера и избытка (кг/ч)
-    # Чем эффективнее скруббер (выше eta_scrubber), тем выше коэффициент полезного использования реагента и МЕНЬШЕ затрат NaOH
+    # 1) от V_газов: через eta_req (чем больше V_г, тем меньше eta_req и меньше масса улавливания)
+    # 2) от eta_scrubber: чем выше КПД скруббера, тем выше полезное использование реагента и МЕНЬШЕ расход NaOH
     k_eff = (k_excess / eta_scrubber) if eta_scrubber > 0 else k_excess
     naoh_hcl_fact = naoh_hcl_theor * k_eff
     naoh_so2_fact = naoh_so2_theor * k_eff
     naoh_total_fact = naoh_hcl_fact + naoh_so2_fact
+
 
     
     # 7. Режим работы: часы в сутки и дни в году
@@ -544,9 +547,8 @@ def calculate_naoh_and_compliance(
     eta_req_hcl_liq = max(0.0, 1.0 - (10.0 / conc_hcl_in_liq)) if conc_hcl_in_liq > 10.0 else 0.0
     eta_req_so2_liq = max(0.0, 1.0 - (50.0 / conc_so2_in_liq)) if conc_so2_in_liq > 50.0 else 0.0
 
-    mass_hcl_neut_liq = mass_hcl_liq * eta_scrubber
-    mass_so2_neut_liq = mass_so2_liq * eta_scrubber
-
+    mass_hcl_neut_liq = mass_hcl_liq * eta_req_hcl_liq
+    mass_so2_neut_liq = mass_so2_liq * eta_req_so2_liq
 
     # 2. Расчет для ТБО
     mass_hcl_tbo = tbo_results.get('mass_hcl', 0.0)
@@ -555,8 +557,9 @@ def calculate_naoh_and_compliance(
     conc_so2_in_tbo = (mass_so2_tbo * 1e6) / flue_gas_flow_tbo if flue_gas_flow_tbo > 0 else 0.0
     eta_req_hcl_tbo = max(0.0, 1.0 - (10.0 / conc_hcl_in_tbo)) if conc_hcl_in_tbo > 10.0 else 0.0
     eta_req_so2_tbo = max(0.0, 1.0 - (50.0 / conc_so2_in_tbo)) if conc_so2_in_tbo > 50.0 else 0.0
-    mass_hcl_neut_tbo = mass_hcl_tbo * eta_scrubber
-    mass_so2_neut_tbo = mass_so2_tbo * eta_scrubber
+    mass_hcl_neut_tbo = mass_hcl_tbo * eta_req_hcl_tbo
+    mass_so2_neut_tbo = mass_so2_tbo * eta_req_so2_tbo
+
 
     # 3. Суммарные потоки
     mass_hcl_in_total = mass_hcl_liq + mass_hcl_tbo
