@@ -22,6 +22,7 @@ from calculations import (
     calculate_liquid_installation_naoh,
     calculate_tbo_installation_naoh,
     calculate_combined_installations_naoh,
+    calculate_naoh_and_compliance,
     LIQUID_WASTE_DATASETS,
     TBO_WASTE_GROUPS,
     TBO_PRESETS,
@@ -86,12 +87,19 @@ st.markdown("""
 
 # Заголовок
 st.markdown('<div class="main-header">🧪 Расчет расхода чистого 100% NaOH в скрубберах газоочистки</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-header">Раздельные расчеты для Установки жидких отходов (1,5 м³/ч) и Установки ТБО (170 кг/ч) • СП 320.1325800.2017</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-header">Раздельные расчеты для Установки жидких отходов (1,5 м³/ч) и Установки ТБО (170 кг/ч) • Проверка нормативов ИТС 9-2020</div>', unsafe_allow_html=True)
 
 # ==============================================================================
 # SIDEBAR: РЕЖИМ РАБОТЫ, СМЕНЫ И ТЕХНОЛОГИЧЕСКИЕ ПАРАМЕТРЫ
 # ==============================================================================
-st.sidebar.header("⚙️ Режим работы и смены")
+st.sidebar.header("⚙️ Технологические параметры")
+
+st.sidebar.subheader("Дымовые газы")
+flue_gas_flow = st.sidebar.number_input(
+    "Расход дымовых газов, нм³/ч",
+    min_value=100.0, max_value=50000.0, value=3000.0, step=100.0,
+    help="Необходим для пересчета кг/ч в мг/нм³ и проверки нормативов ИТС 9-2020"
+)
 
 with st.sidebar.expander("⏱️ График эксплуатации и простои", expanded=True):
     hours_per_day = st.number_input(
@@ -122,9 +130,14 @@ with st.sidebar.expander("🏭 Параметры скруббера", expanded=
         help="Запас щелочи для поддержания щелочного pH скрубберной жидкости"
     )
 
-with st.sidebar.expander("🔥 Степень конверсии в газ", expanded=False):
-    k_conv_cl = st.slider("Конверсия Cl → HCl", min_value=0.0, max_value=1.0, value=0.98, step=0.01, help="Доля хлора, переходящая в HCl при термическом разложении (от 0.0 до 1.0)")
-    k_conv_s = st.slider("Конверсия S → SO₂", min_value=0.0, max_value=1.0, value=0.90, step=0.01, help="Доля серы, переходящая в SO₂ при окислении (от 0.0 до 1.0)")
+with st.sidebar.expander("🔥 Конверсия при 1100 °C", expanded=True):
+    st.caption("Часть Cl и S связывается в золе (NaCl, KCl, CaSO₄)")
+    k_conv_cl_liq = st.slider("Доля Cl → HCl (жидкие отходы)", 0.0, 1.0, 0.95, 0.01, help="Степень перехода Cl в HCl для жидких отходов (при распылении в факел)")
+    k_conv_s_liq = st.slider("Доля S → SO₂ (жидкие отходы)", 0.0, 1.0, 0.85, 0.01, help="Степень перехода S в SO₂ для жидких отходов (с учетом связывания в золе)")
+    k_conv_cl_tbo = st.slider("Доля Cl → HCl (ТБО)", 0.0, 1.0, 0.85, 0.01, help="Степень перехода Cl в HCl для ТБО (с учетом удержания NaCl/KCl в золе)")
+    k_conv_s_tbo = st.slider("Доля S → SO₂ (ТБО)", 0.0, 1.0, 0.80, 0.01, help="Степень перехода S в SO₂ для ТБО (с учетом связывания CaSO₄ в золе)")
+    k_conv_c = st.slider("Доля C → CO₂", 0.0, 1.0, 0.98, 0.01, help="Степень полного окисления углерода в CO₂")
+
 
 # ==============================================================================
 # ОСНОВНЫЕ ВКЛАДКИ
@@ -175,7 +188,7 @@ with tab1:
         
         c_cl1 = st.number_input("Cl⁻ (Набор 1), мг/дм³", value=float(val_cl1), step=100.0, key="c_cl1")
         c_so41 = st.number_input("SO₄²⁻ (Набор 1), мг/дм³", value=float(val_so41), step=50.0, key="c_so41")
-        res_liq1_feed = calculate_liquid_waste_pollutants(q_liq, c_cl1, c_so41, k_conv_cl, k_conv_s, dataset_name="Набор 1 (Молодой полигон)")
+        res_liq1_feed = calculate_liquid_waste_pollutants(q_liq, c_cl1, c_so41, k_conv_cl_liq, k_conv_s_liq, dataset_name="Набор 1 (Молодой полигон)")
 
     with c_set2:
         st.markdown("##### 🧪 Набор 2: «Старый полигон» (метаногенная фаза)")
@@ -186,7 +199,7 @@ with tab1:
         
         c_cl2 = st.number_input("Cl⁻ (Набор 2), мг/дм³", value=float(val_cl2), step=100.0, key="c_cl2")
         c_so42 = st.number_input("SO₄²⁻ (Набор 2), мг/дм³", value=float(val_so42), step=50.0, key="c_so42")
-        res_liq2_feed = calculate_liquid_waste_pollutants(q_liq, c_cl2, c_so42, k_conv_cl, k_conv_s, dataset_name="Набор 2 (Старый полигон)")
+        res_liq2_feed = calculate_liquid_waste_pollutants(q_liq, c_cl2, c_so42, k_conv_cl_liq, k_conv_s_liq, dataset_name="Набор 2 (Старый полигон)")
 
     if active_set_key == "young":
         active_liq_feed = res_liq1_feed
@@ -205,7 +218,7 @@ with tab1:
             active_c_cl = st.number_input("Cl⁻, мг/дм³", value=3500.0, step=100.0, key="cust_cl_in")
         with col_cu2:
             active_c_so4 = st.number_input("SO₄²⁻, мг/дм³", value=800.0, step=50.0, key="cust_so4_in")
-        active_liq_feed = calculate_liquid_waste_pollutants(q_liq, active_c_cl, active_c_so4, k_conv_cl, k_conv_s, dataset_name="Пользовательский")
+        active_liq_feed = calculate_liquid_waste_pollutants(q_liq, active_c_cl, active_c_so4, k_conv_cl_liq, k_conv_s_liq, dataset_name="Пользовательский")
         active_liq_title = "Пользовательский набор"
 
     # Отдельный расчет расхода чистого 100% NaOH
@@ -320,7 +333,7 @@ with tab2:
         with c_d2:
             d_s = st.number_input("S в ТБО, % масс.", value=0.30, step=0.05, key="d_s_tbo")
             
-        tbo_feed_res = calculate_tbo_pollutants(m_tbo, custom_elements={"cl": d_cl, "s": d_s}, k_conv_cl=k_conv_cl, k_conv_s=k_conv_s)
+        tbo_feed_res = calculate_tbo_pollutants(m_tbo, custom_elements={"cl": d_cl, "s": d_s}, k_conv_cl=k_conv_cl_tbo, k_conv_s=k_conv_s_tbo, k_conv_c=k_conv_c)
     else:
         if 'last_preset' not in st.session_state:
             st.session_state['last_preset'] = "Усредненный смешанный состав (рекомендуемый)"
@@ -364,7 +377,8 @@ with tab2:
         else:
             st.success(f"✅ Сумма долей ТБО: **{tot_m:.1f}%** (среднее Cl = {(sum(v*TBO_WASTE_GROUPS[k]['cl'] for k,v in user_morph.items())/100):.3f}%, S = {(sum(v*TBO_WASTE_GROUPS[k]['s'] for k,v in user_morph.items())/100):.3f}%)")
             
-        tbo_feed_res = calculate_tbo_pollutants(m_tbo, morphology_dict=user_morph, k_conv_cl=k_conv_cl, k_conv_s=k_conv_s)
+        tbo_feed_res = calculate_tbo_pollutants(m_tbo, morphology_dict=user_morph, k_conv_cl=k_conv_cl_tbo, k_conv_s=k_conv_s_tbo, k_conv_c=k_conv_c)
+
 
     # Отдельный расчет расхода чистого 100% NaOH для Установки ТБО
     tbo_calc_res = calculate_tbo_installation_naoh(
@@ -453,12 +467,24 @@ with tab3:
     st.subheader("📊 3. Сводная ведомость и Сравнение установок")
     
     comb_calc_res = calculate_combined_installations_naoh(liq_calc_res, tbo_calc_res)
+    final_results = calculate_naoh_and_compliance(
+        liquid_results=active_liq_feed,
+        tbo_results=tbo_feed_res,
+        flue_gas_flow=flue_gas_flow,
+        eta_scrubber=eta_scrubber,
+        k_excess=k_excess,
+        eta_co2_abs=0.0,
+        c_naoh_sol=100.0,
+        hours_per_day=hours_per_day,
+        operating_days_year=operating_days_year
+    )
     
     st.session_state['liq_calc'] = liq_calc_res
     st.session_state['tbo_calc'] = tbo_calc_res
     st.session_state['comb_calc'] = comb_calc_res
     st.session_state['liquid_feed'] = active_liq_feed
     st.session_state['tbo_feed'] = tbo_feed_res
+    st.session_state['final_results'] = final_results
     st.session_state['params'] = {
         'q_liq': q_liq,
         'c_cl_liq': active_c_cl,
@@ -471,11 +497,38 @@ with tab3:
         'annual_hours': annual_hours,
         'eta_scrubber': eta_scrubber,
         'k_excess': k_excess,
-        'k_conv_cl': k_conv_cl,
-        'k_conv_s': k_conv_s
+        'flue_gas_flow': flue_gas_flow,
+        'k_conv_cl_liq': k_conv_cl_liq,
+        'k_conv_s_liq': k_conv_s_liq,
+        'k_conv_cl_tbo': k_conv_cl_tbo,
+        'k_conv_s_tbo': k_conv_s_tbo,
+        'k_conv_c': k_conv_c,
+        'final_results': final_results
     }
     
+    # === БЛОК COMPLIANCE ПО ИТС 9-2020 ===
+    st.subheader("🛡️ Проверка compliance по ИТС 9-2020 (Приложение В)")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric("HCl на входе в скруббер", f"{final_results['conc_hcl_in']:.1f} мг/нм³")
+        st.caption(f"Требуемая эффективность для выхода на ≤10 мг/нм³: **{final_results['eta_req_hcl']:.1%}**")
+
+    with col2:
+        st.metric("SO₂ на входе в скруббер", f"{final_results['conc_so2_in']:.1f} мг/нм³")
+        st.caption(f"Требуемая эффективность для выхода на ≤50 мг/нм³: **{final_results['eta_req_so2']:.1%}**")
+
+    with col3:
+        st.markdown(f"### {final_results['compliance_status']}")
+        if final_results['compliance_msg']:
+            st.warning(final_results['compliance_msg'])
+        else:
+            st.success("Текущая эффективность скруббера достаточна для соблюдения нормативов.")
+
+    st.markdown("---")
     st.markdown(f"**График работы:** {hours_per_day:.0f} ч/сутки • {operating_days_year:.0f} рабочих дней в году • Общий фонд: **{annual_hours:.0f} ч/год**")
+
     
     # Сводная таблица
     df_compare_installations = pd.DataFrame([
@@ -646,6 +699,7 @@ with tab4:
             tc = st.session_state['tbo_calc']
             cc = st.session_state['comb_calc']
             pm = st.session_state['params']
+            fin = st.session_state.get('final_results', {})
             st.markdown(f"""
             ### ЗАКЛЮЧЕНИЕ
             
@@ -664,14 +718,20 @@ with tab4:
             **3. Суммарная годовая потребность комплекса:**
             - **Чистый 100% NaOH: {cc['naoh_pure_year_t']:.2f} т/год** ({cc['naoh_pure_day_kg']:.1f} кг/сут).
             - **Средневзвешенный удельный расход по комплексу: {cc['spec_naoh_pure_g_per_kg']:.1f} г 100% NaOH / кг суммарных отходов**.
+            
+            **4. Соответствие нормативам ИТС 9-2020 (Приложение В):**
+            - Расчетная концентрация HCl на выходе: **{fin.get('conc_hcl_out', 0.0):.2f} мг/нм³** (норматив ≤ 10 мг/нм³).
+            - Расчетная концентрация SO₂ на выходе: **{fin.get('conc_so2_out', 0.0):.2f} мг/нм³** (норматив ≤ 50 мг/нм³).
+            - Статус соответствия: **{fin.get('compliance_status', '✅ НОРМА')}**.
             """)
 
 # Футер
 st.markdown("---")
 st.markdown(
-    "<div style='text-align: center; color: #718096; font-size: 0.85rem;'>"
-    "Инженерный калькулятор расхода чистого 100% NaOH для мокрых скрубберов термических установок • "
-    "Методология соответствует СП 320.1325800.2017 и ГОСТ Р 55827-2013"
+    "<div style='text-align: center; color: gray; font-size: 0.9em;'>"
+    "Расчет выполнен с учетом коэффициентов связывания гетероатомов в золе при Т = 1100 °C "
+    "и предельных значений выбросов ИТС 9-2020 (Приложение В)."
     "</div>",
     unsafe_allow_html=True
 )
+

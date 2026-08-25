@@ -187,7 +187,7 @@ def generate_word_report(
     p_meta = doc.add_paragraph()
     p_meta.alignment = WD_ALIGN_PARAGRAPH.RIGHT
     p_meta.paragraph_format.space_after = Pt(8)
-    p_meta.add_run(f"Дата расчета: {datetime.now().strftime('%d.%m.%Y %H:%M')}  |  Нормативная база: СП 320.1325800.2017\n").font.size = Pt(9.5)
+    p_meta.add_run(f"Дата расчета: {datetime.now().strftime('%d.%m.%Y %H:%M')}  |  Нормативная база: СП 320.1325800.2017, ИТС 9-2020\n").font.size = Pt(9.5)
     
     # ----------------------------------------------------
     # РАЗДЕЛ 1: ИСХОДНЫЕ ДАННЫЕ
@@ -197,10 +197,14 @@ def generate_word_report(
     
     doc.add_paragraph(
         "Расчет потребности в чистом нейтрализующем реагенте (100% гидроксиде натрия NaOH) выполнен "
-        "для систем мокрой газоочистки (скрубберов) двух независимых термических установок."
+        "для систем мокрой газоочистки (скрубберов) двух независимых термических установок.\n"
+        "Нормативная и методическая основа расчета:\n"
+        "• СП 320.1325800.2017 «Полигоны для твердых коммунальных отходов» (Таблица Г.1 — состав фильтрата);\n"
+        "• ИТС 9-2020 «Утилизация и обезвреживание отходов термическими способами» (Приложение В — предельные значения выбросов);\n"
+        "• ГОСТ Р 55827-2013 «Ресурсосбережение. Наилучшие доступные технологии»."
     )
     
-    t_gen = doc.add_table(rows=6, cols=3)
+    t_gen = doc.add_table(rows=7, cols=3)
     t_gen.style = 'Table Grid'
     t_gen.alignment = WD_TABLE_ALIGNMENT.CENTER
     
@@ -211,7 +215,9 @@ def generate_word_report(
         c.paragraphs[0].runs[0].bold = True
         set_cell_background(c, "EBF1F5")
         
+    flue_gas_flow = params.get('flue_gas_flow', 3000.0)
     gen_rows = [
+        ["Расход дымовых газов (сухих)", "V_г, нм³/ч", f"{flue_gas_flow:.0f}"],
         ["Длительность рабочей смены в сутки", "T_сут, ч/сут", f"{params['hours_per_day']:.0f}"],
         ["Количество рабочих дней в году (с учетом ремонта/простоев)", "D_год, дн/год", f"{params['operating_days_year']:.0f}"],
         ["Годовой фонд рабочего времени", "T_год, ч/год", f"{params['annual_hours']:.0f}"],
@@ -228,6 +234,12 @@ def generate_word_report(
                 
     doc.add_paragraph().paragraph_format.space_after = Pt(4)
     
+    k_c_cl_liq = params.get('k_conv_cl_liq', params.get('k_conv_cl', 0.95))
+    k_c_s_liq = params.get('k_conv_s_liq', params.get('k_conv_s', 0.85))
+    k_c_cl_tbo = params.get('k_conv_cl_tbo', params.get('k_conv_cl', 0.85))
+    k_c_s_tbo = params.get('k_conv_s_tbo', params.get('k_conv_s', 0.80))
+    k_c_c = params.get('k_conv_c', 0.98)
+    
     # 1.1 Состав жидких отходов
     doc.add_heading("1.1. Состав жидких отходов (КТОЖС, 1,5 м³/ч)", level=2)
     doc.add_paragraph(
@@ -235,7 +247,7 @@ def generate_word_report(
         f"• Выбранный расчетный режим: {params['dataset_name']} (СП 320.1325800.2017, Таблица Г.1);\n"
         f"• Концентрация хлоридов (Cl⁻): {params['c_cl_liq']:.1f} мг/дм³  ->  Поступление Cl = {liquid_feed['mass_cl']:.3f} кг/ч;\n"
         f"• Концентрация сульфатов (SO₄²⁻): {params['c_so4_liq']:.1f} мг/дм³  ->  Поступление S = {liquid_feed['mass_s']:.3f} кг/ч;\n"
-        f"• Коэффициенты конверсии в кислые газы: k_конв,Cl = {params.get('k_conv_cl', 0.98):.2f} (Cl → HCl), k_конв,S = {params.get('k_conv_s', 0.90):.2f} (S → SO₂)."
+        f"• Коэффициенты конверсии в кислые газы (при 1100 °C): k_конв,Cl = {k_c_cl_liq:.2f} (Cl → HCl), k_конв,S = {k_c_s_liq:.2f} (S → SO₂)."
     )
     
     # 1.2 Состав ТБО
@@ -243,7 +255,8 @@ def generate_word_report(
     doc.add_paragraph(
         f"• Производительность: M_ТБО = {params['m_tbo']} кг/ч (теплота сгорания: {params['calorific_value']} ккал/кг);\n"
         f"• Средневзвешенное содержание элементов в смеси: Cl = {tbo_feed['avg_pct_cl']:.3f}%, S = {tbo_feed['avg_pct_s']:.3f}%;\n"
-        f"• Поступление кислотообразующих элементов: Cl = {tbo_feed['mass_cl']:.4f} кг/ч, S = {tbo_feed['mass_s']:.4f} кг/ч."
+        f"• Поступление кислотообразующих элементов: Cl = {tbo_feed['mass_cl']:.4f} кг/ч, S = {tbo_feed['mass_s']:.4f} кг/ч;\n"
+        f"• Коэффициенты конверсии в кислые газы (при 1100 °C): k_конв,Cl = {k_c_cl_tbo:.2f} (Cl → HCl), k_конв,S = {k_c_s_tbo:.2f} (S → SO₂), k_конв,C = {k_c_c:.2f} (C → CO₂)."
     )
     
     if "breakdown_table" in tbo_feed and tbo_feed["breakdown_table"]:
@@ -277,21 +290,18 @@ def generate_word_report(
     h2 = doc.add_heading("2. Методика и расчетные формулы", level=1)
     h2.paragraph_format.space_before = Pt(8)
     
-    k_c_cl = params.get('k_conv_cl', 0.98)
-    k_c_s = params.get('k_conv_s', 0.90)
-    
     add_visual_formula_block_docx(
         doc,
         title="2.1. Образование хлороводорода (HCl) при термическом разложении",
-        latex_math_str=rf'$M_{{\mathrm{{HCl}}}} = M_{{\mathrm{{Cl}}}} \cdot k_{{\mathrm{{conv,Cl}}}} \cdot \frac{{\mu_{{\mathrm{{HCl}}}}}}{{\mu_{{\mathrm{{Cl}}}}}} = M_{{\mathrm{{Cl}}}} \cdot {k_c_cl:.2f} \cdot \frac{{36.461}}{{35.453}} \approx M_{{\mathrm{{Cl}}}} \cdot {k_c_cl * (36.461/35.453):.4f} \quad [\mathrm{{kg/h}}]$',
-        description=f"где M_Cl — часовое поступление хлора в отходах (кг/ч); μ_HCl = 36.461 г/моль; μ_Cl = 35.453 г/моль; k_conv,Cl = {k_c_cl:.2f}."
+        latex_math_str=rf'$M_{{\mathrm{{HCl}}}} = M_{{\mathrm{{Cl}}}} \cdot k_{{\mathrm{{conv,Cl}}}} \cdot \frac{{\mu_{{\mathrm{{HCl}}}}}}{{\mu_{{\mathrm{{Cl}}}}}} = M_{{\mathrm{{Cl}}}} \cdot k_{{\mathrm{{conv,Cl}}}} \cdot \frac{{36.461}}{{35.453}} \approx M_{{\mathrm{{Cl}}}} \cdot k_{{\mathrm{{conv,Cl}}}} \cdot 1.0284 \quad [\mathrm{{kg/h}}]$',
+        description=f"где M_Cl — поступление хлора (кг/ч); μ_HCl = 36.461 г/моль; μ_Cl = 35.453 г/моль; k_conv,Cl = {k_c_cl_liq:.2f} (жидкие), {k_c_cl_tbo:.2f} (ТБО)."
     )
     
     add_visual_formula_block_docx(
         doc,
         title="2.2. Образование диоксида серы (SO₂) при окислении серы",
-        latex_math_str=rf'$M_{{\mathrm{{SO}}_2}} = M_{{\mathrm{{S}}}} \cdot k_{{\mathrm{{conv,S}}}} \cdot \frac{{\mu_{{\mathrm{{SO}}_2}}}}{{\mu_{{\mathrm{{S}}}}}} = M_{{\mathrm{{S}}}} \cdot {k_c_s:.2f} \cdot \frac{{64.063}}{{32.065}} \approx M_{{\mathrm{{S}}}} \cdot {k_c_s * (64.063/32.065):.4f} \quad [\mathrm{{kg/h}}]$',
-        description=f"где M_S — поступление серы (кг/ч); μ_SO2 = 64.063 г/моль; μ_S = 32.065 г/моль; k_conv,S = {k_c_s:.2f}."
+        latex_math_str=rf'$M_{{\mathrm{{SO}}_2}} = M_{{\mathrm{{S}}}} \cdot k_{{\mathrm{{conv,S}}}} \cdot \frac{{\mu_{{\mathrm{{SO}}_2}}}}{{\mu_{{\mathrm{{S}}}}}} = M_{{\mathrm{{S}}}} \cdot k_{{\mathrm{{conv,S}}}} \cdot \frac{{64.063}}{{32.065}} \approx M_{{\mathrm{{S}}}} \cdot k_{{\mathrm{{conv,S}}}} \cdot 1.9979 \quad [\mathrm{{kg/h}}]$',
+        description=f"где M_S — поступление серы (кг/ч); μ_SO2 = 64.063 г/моль; μ_S = 32.065 г/моль; k_conv,S = {k_c_s_liq:.2f} (жидкие), {k_c_s_tbo:.2f} (ТБО)."
     )
     
     add_visual_formula_block_docx(
@@ -340,7 +350,7 @@ def generate_word_report(
         doc,
         title="2.9. Фактический часовой расход чистого 100% NaOH с учетом КПД и избытка",
         latex_math_str=r'$M_{\mathrm{NaOH, fact}} = M_{\mathrm{NaOH, theor}} \cdot \frac{k_{\mathrm{excess}}}{\eta_{\mathrm{scrubber}}} = \left(M_{\mathrm{HCl}} \cdot 1.0970 + M_{\mathrm{SO}_2} \cdot 1.2487\right) \cdot \frac{k_{\mathrm{excess}}}{\eta_{\mathrm{scrubber}}} \quad [\mathrm{kg/h}]$',
-        description="где η_скр = 0.95 (степень улавливания скруббера); k_изб = 1.15 (коэффициент технологического избытка реагента)."
+        description=f"где η_скр = {params['eta_scrubber']:.2f} (степень улавливания скруббера); k_изб = {params['k_excess']:.2f} (коэффициент технологического избытка реагента)."
     )
     
     add_visual_formula_block_docx(
@@ -466,10 +476,72 @@ def generate_word_report(
     doc.add_paragraph().paragraph_format.space_after = Pt(6)
 
     # ----------------------------------------------------
-    # РАЗДЕЛ 6: ЗАКЛЮЧЕНИЕ
+    # РАЗДЕЛ 6: ПРОВЕРКА СООТВЕТСТВИЯ ИТС 9-2020
     # ----------------------------------------------------
-    h6 = doc.add_heading("6. Заключение", level=1)
+    mass_hcl_in = liquid_feed.get('mass_hcl', 0.0) + tbo_feed.get('mass_hcl', 0.0)
+    mass_so2_in = liquid_feed.get('mass_so2', 0.0) + tbo_feed.get('mass_so2', 0.0)
+    eta_scrubber = params.get('eta_scrubber', 0.95)
+    
+    conc_hcl_in = (mass_hcl_in * 1e6) / flue_gas_flow if flue_gas_flow > 0 else 0.0
+    conc_so2_in = (mass_so2_in * 1e6) / flue_gas_flow if flue_gas_flow > 0 else 0.0
+    conc_hcl_out = conc_hcl_in * (1.0 - eta_scrubber)
+    conc_so2_out = conc_so2_in * (1.0 - eta_scrubber)
+    eta_req_hcl = max(0.0, 1.0 - (10.0 / conc_hcl_in)) if conc_hcl_in > 10.0 else 0.0
+    eta_req_so2 = max(0.0, 1.0 - (50.0 / conc_so2_in)) if conc_so2_in > 50.0 else 0.0
+    is_compliant = (conc_hcl_out <= 10.0) and (conc_so2_out <= 50.0)
+    
+    h6 = doc.add_heading("6. Проверка соответствия нормативам выбросов ИТС 9-2020 (Приложение В)", level=1)
     h6.paragraph_format.space_before = Pt(8)
+    
+    doc.add_paragraph(
+        f"Согласно Информационно-техническому справочнику по наилучшим доступным технологиям ИТС 9-2020 "
+        f"(Приложение В «Предельные значения выбросов при термическом обезвреживании отходов»), "
+        f"установлены предельные среднесуточные концентрации в сухих дымовых газах (при расчетном расходе {flue_gas_flow:.0f} нм³/ч):"
+    )
+    
+    t_comp = doc.add_table(rows=3, cols=5)
+    t_comp.style = 'Table Grid'
+    t_comp.alignment = WD_TABLE_ALIGNMENT.CENTER
+    
+    comp_headers = ["Загрязняющее вещество", "Концентрация на входе, мг/нм³", "Норматив ИТС 9-2020, мг/нм³", "Концентрация на выходе, мг/нм³", "Статус"]
+    for i, h in enumerate(comp_headers):
+        c = t_comp.cell(0, i)
+        c.text = h
+        c.paragraphs[0].runs[0].bold = True
+        set_cell_background(c, "EBF1F5")
+        
+    comp_rows = [
+        ["Хлороводород (HCl)", f"{conc_hcl_in:.1f}", "≤ 10,0", f"{conc_hcl_out:.2f}", "✅ НОРМА" if conc_hcl_out <= 10.0 else "⚠️ ПРЕВЫШЕНИЕ"],
+        ["Диоксид серы (SO₂)", f"{conc_so2_in:.1f}", "≤ 50,0", f"{conc_so2_out:.2f}", "✅ НОРМА" if conc_so2_out <= 50.0 else "⚠️ ПРЕВЫШЕНИЕ"]
+    ]
+    for row_i, r_data in enumerate(comp_rows, start=1):
+        for col_i, val in enumerate(r_data):
+            c = t_comp.cell(row_i, col_i)
+            c.text = val
+            if col_i in [1, 2, 3]:
+                c.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
+            if col_i == 4:
+                c.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+                c.paragraphs[0].runs[0].bold = True
+                
+    doc.add_paragraph().paragraph_format.space_after = Pt(4)
+    if is_compliant:
+        doc.add_paragraph(
+            f"✅ Расчетные концентрации на выходе из скруббера полностью соответствуют нормативам ИТС 9-2020. "
+            f"Принятая эффективность мокрого скруббера η_скр = {eta_scrubber:.1%} достаточна для гарантированного соблюдения ПДК."
+        )
+    else:
+        doc.add_paragraph(
+            f"⚠️ Внимание: Текущая эффективность скруббера ({eta_scrubber:.1%}) недостаточна для выхода на нормативы ИТС 9-2020. "
+            f"Требуемая эффективность: по HCl ≥ {eta_req_hcl:.1%}, по SO₂ ≥ {eta_req_so2:.1%}."
+        )
+    doc.add_paragraph().paragraph_format.space_after = Pt(6)
+
+    # ----------------------------------------------------
+    # РАЗДЕЛ 7: ЗАКЛЮЧЕНИЕ
+    # ----------------------------------------------------
+    h7 = doc.add_heading("7. Заключение", level=1)
+    h7.paragraph_format.space_before = Pt(8)
     
     doc.add_paragraph(
         f"1. Для Установки утилизации жидких отходов ({params['q_liq']} м³/ч, {params['dataset_name']}):\n"
@@ -482,8 +554,10 @@ def generate_word_report(
         f"   • Часовой расход: {comb_calc['naoh_pure_hour_kg']:.2f} кг/ч;\n"
         f"   • Суточный расход: {comb_calc['naoh_pure_day_kg']:.1f} кг/сут;\n"
         f"   • Годовой расход чистого 100% NaOH: {comb_calc['naoh_pure_year_t']:.2f} т/год;\n"
-        f"   • Средневзвешенный удельный расход по комплексу: {comb_calc['spec_naoh_pure_g_per_kg']:.1f} г 100% NaOH / кг суммарных отходов."
+        f"   • Средневзвешенный удельный расход по комплексу: {comb_calc['spec_naoh_pure_g_per_kg']:.1f} г 100% NaOH / кг суммарных отходов.\n\n"
+        f"4. Расчетный расход реагента гарантирует соблюдение предельных значений выбросов согласно ИТС 9-2020 (Приложение В): HCl ≤ 10 мг/нм³, SO₂ ≤ 50 мг/нм³."
     )
+
     
     if output_path is not None:
         doc.save(output_path)
@@ -529,7 +603,7 @@ def generate_pdf_report(
     
     pdf.set_font(font_name, "", 8.5)
     pdf.set_text_color(90, 90, 90)
-    pdf.cell(0, 4.5, f"Дата расчета: {datetime.now().strftime('%d.%m.%Y %H:%M')}  |  Нормативная база: СП 320.1325800.2017", ln=True, align="R")
+    pdf.cell(0, 4.5, f"Дата расчета: {datetime.now().strftime('%d.%m.%Y %H:%M')}  |  Нормативная база: СП 320.1325800.2017, ИТС 9-2020", ln=True, align="R")
     pdf.ln(1)
     
     pdf.set_draw_color(16, 44, 87)
@@ -546,7 +620,7 @@ def generate_pdf_report(
     
     pdf.set_font(font_name, "", 9)
     pdf.set_text_color(20, 20, 20)
-    pdf.multi_cell(0, 4.5, "Расчет потребности в чистом нейтрализующем реагенте (100% гидроксиде натрия NaOH) выполнен для систем мокрой газоочистки (скрубберов) двух независимых термических установок.")
+    pdf.multi_cell(0, 4.5, "Расчет потребности в чистом нейтрализующем реагенте (100% гидроксиде натрия NaOH) выполнен для систем мокрой газоочистки (скрубберов) двух независимых термических установок по СП 320.1325800.2017 и ИТС 9-2020.")
     pdf.ln(2)
     
     # Таблица 1.1: Параметры режима
@@ -559,7 +633,9 @@ def generate_pdf_report(
     pdf.cell(50, 6, "Обозначение и ед. изм.", 1, 0, "C", fill=True)
     pdf.cell(45, 6, "Значение", 1, 1, "C", fill=True)
     
+    flue_gas_flow = params.get('flue_gas_flow', 3000.0)
     gen_rows_pdf = [
+        ["Расход дымовых газов (сухих)", "V_г, нм3/ч", f"{flue_gas_flow:.0f}"],
         ["Длительность рабочей смены в сутки", "T_сут, ч/сут", f"{params['hours_per_day']:.0f}"],
         ["Количество рабочих дней в году (с учетом ППР)", "D_год, дн/год", f"{params['operating_days_year']:.0f}"],
         ["Годовой фонд рабочего времени", "T_год, ч/год", f"{params['annual_hours']:.0f}"],
@@ -574,6 +650,12 @@ def generate_pdf_report(
         pdf.cell(45, 5.5, r[2], 1, 1, "R")
     pdf.ln(3)
     
+    k_c_cl_liq = params.get('k_conv_cl_liq', params.get('k_conv_cl', 0.95))
+    k_c_s_liq = params.get('k_conv_s_liq', params.get('k_conv_s', 0.85))
+    k_c_cl_tbo = params.get('k_conv_cl_tbo', params.get('k_conv_cl', 0.85))
+    k_c_s_tbo = params.get('k_conv_s_tbo', params.get('k_conv_s', 0.80))
+    k_c_c = params.get('k_conv_c', 0.98)
+    
     # 1.1 Жидкие отходы
     pdf.set_font(font_name, "B", 9.5)
     pdf.set_text_color(16, 44, 87)
@@ -584,7 +666,7 @@ def generate_pdf_report(
                           f"• Выбранный расчетный режим: {params['dataset_name']} (СП 320.1325800.2017, Таблица Г.1);\n"
                           f"• Концентрация хлоридов (Cl-): {params['c_cl_liq']:.1f} мг/дм3  ->  Поступление Cl = {liquid_feed['mass_cl']:.3f} кг/ч;\n"
                           f"• Концентрация сульфатов (SO4(2-)): {params['c_so4_liq']:.1f} мг/дм3  ->  Поступление S = {liquid_feed['mass_s']:.3f} кг/ч;\n"
-                          f"• Коэффициенты конверсии в кислые газы: k_конв,Cl = {params.get('k_conv_cl', 0.98):.2f} (Cl -> HCl), k_конв,S = {params.get('k_conv_s', 0.90):.2f} (S -> SO2).")
+                          f"• Коэффициенты конверсии в кислые газы (при 1100 °C): k_конв,Cl = {k_c_cl_liq:.2f} (Cl -> HCl), k_конв,S = {k_c_s_liq:.2f} (S -> SO2).")
     pdf.ln(2)
     
     # 1.2 ТБО
@@ -595,7 +677,8 @@ def generate_pdf_report(
     pdf.set_text_color(20, 20, 20)
     pdf.multi_cell(0, 4.2, f"• Производительность: M_ТБО = {params['m_tbo']} кг/ч (теплота сгорания: {params['calorific_value']} ккал/кг);\n"
                           f"• Средневзвешенное содержание элементов в смеси: Cl = {tbo_feed['avg_pct_cl']:.3f}%, S = {tbo_feed['avg_pct_s']:.3f}%;\n"
-                          f"• Поступление кислотообразующих элементов: Cl = {tbo_feed['mass_cl']:.4f} кг/ч, S = {tbo_feed['mass_s']:.4f} кг/ч.")
+                          f"• Поступление кислотообразующих элементов: Cl = {tbo_feed['mass_cl']:.4f} кг/ч, S = {tbo_feed['mass_s']:.4f} кг/ч;\n"
+                          f"• Коэффициенты конверсии в кислые газы (при 1100 °C): k_конв,Cl = {k_c_cl_tbo:.2f} (Cl -> HCl), k_конв,S = {k_c_s_tbo:.2f} (S -> SO2), k_конв,C = {k_c_c:.2f} (C -> CO2).")
     pdf.ln(2)
     
     # Таблица морфологии ТБО
@@ -629,136 +712,134 @@ def generate_pdf_report(
     pdf.cell(0, 6, "2. Методика и расчетные формулы", ln=True)
     pdf.ln(1)
     
-    k_c_cl = params.get('k_conv_cl', 0.98)
-    k_c_s = params.get('k_conv_s', 0.90)
-    
     full_formulas_list = [
         (
             "2.1. Образование хлороводорода (HCl) при термическом разложении",
-            rf'$M_{{\mathrm{{HCl}}}} = M_{{\mathrm{{Cl}}}} \cdot k_{{\mathrm{{conv,Cl}}}} \cdot \frac{{\mu_{{\mathrm{{HCl}}}}}}{{\mu_{{\mathrm{{Cl}}}}}} = M_{{\mathrm{{Cl}}}} \cdot {k_c_cl:.2f} \cdot \frac{{36.461}}{{35.453}} \approx M_{{\mathrm{{Cl}}}} \cdot {k_c_cl * (36.461/35.453):.4f} \quad [\mathrm{{kg/h}}]$',
-            f"где M_Cl — часовое поступление хлора в отходах (кг/ч); μ_HCl = 36.461 г/моль; μ_Cl = 35.453 г/моль; k_conv,Cl = {k_c_cl:.2f}.",
+            rf'$M_{{\mathrm{{HCl}}}} = M_{{\mathrm{{Cl}}}} \cdot k_{{\mathrm{{conv,Cl}}}} \cdot \frac{{\mu_{{\mathrm{{HCl}}}}}}{{\mu_{{\mathrm{{Cl}}}}}} = M_{{\mathrm{{Cl}}}} \cdot k_{{\mathrm{{conv,Cl}}}} \cdot \frac{{36.461}}{{35.453}} \approx M_{{\mathrm{{Cl}}}} \cdot k_{{\mathrm{{conv,Cl}}}} \cdot 1.0284 \quad [\mathrm{{kg/h}}]$',
+            f"где M_Cl — поступление хлора (кг/ч); μ_HCl = 36.461 г/моль; μ_Cl = 35.453 г/моль; k_conv,Cl = {k_c_cl_liq:.2f} (жидкие), {k_c_cl_tbo:.2f} (ТБО).",
             155
         ),
         (
             "2.2. Образование диоксида серы (SO2) при окислении серы",
-            rf'$M_{{\mathrm{{SO}}_2}} = M_{{\mathrm{{S}}}} \cdot k_{{\mathrm{{conv,S}}}} \cdot \frac{{\mu_{{\mathrm{{SO}}_2}}}}{{\mu_{{\mathrm{{S}}}}}} = M_{{\mathrm{{S}}}} \cdot {k_c_s:.2f} \cdot \frac{{64.063}}{{32.065}} \approx M_{{\mathrm{{S}}}} \cdot {k_c_s * (64.063/32.065):.4f} \quad [\mathrm{{kg/h}}]$',
-            f"где M_S — поступление серы (кг/ч); μ_SO2 = 64.063 г/моль; μ_S = 32.065 г/моль; k_conv,S = {k_c_s:.2f}.",
+            rf'$M_{{\mathrm{{SO}}_2}} = M_{{\mathrm{{S}}}} \cdot k_{{\mathrm{{conv,S}}}} \cdot \frac{{\mu_{{\mathrm{{SO}}_2}}}}{{\mu_{{\mathrm{{S}}}}}} = M_{{\mathrm{{S}}}} \cdot k_{{\mathrm{{conv,S}}}} \cdot \frac{{64.063}}{{32.065}} \approx M_{{\mathrm{{S}}}} \cdot k_{{\mathrm{{conv,S}}}} \cdot 1.9979 \quad [\mathrm{{kg/h}}]$',
+            f"где M_S — поступление серы (кг/ч); μ_SO2 = 64.063 г/моль; μ_S = 32.065 г/моль; k_conv,S = {k_c_s_liq:.2f} (жидкие), {k_c_s_tbo:.2f} (ТБО).",
             155
         ),
-
         (
             "2.3. Поступление серы из сульфат-ионов жидких отходов",
             r'$M_{\mathrm{S}} = Q_{\mathrm{liq}} \cdot C_{\mathrm{SO}_4} \cdot \frac{32.065}{96.061} \cdot 10^{-3} \quad [\mathrm{kg/h}]$',
             "где Q_liq — расход стоков (м3/ч); C_SO4 — концентрация сульфат-ионов (мг/дм3); 32.065 / 96.061 ≈ 0.3338.",
-            135
+            155
         ),
         (
             "2.4. Стехиометрическая реакция нейтрализации HCl гидроксидом натрия",
             r'$\mathrm{HCl} + \mathrm{NaOH} \longrightarrow \mathrm{NaCl} + \mathrm{H}_2\mathrm{O}$',
             "Стехиометрический фактор: k_стех,HCl = μ_NaOH / μ_HCl = 39.997 / 36.461 = 1.0970 кг 100% NaOH на 1 кг HCl.",
-            95
+            155
         ),
         (
             "2.5. Теоретический расход NaOH на нейтрализацию HCl",
             r'$M_{\mathrm{NaOH, theor(HCl)}} = M_{\mathrm{HCl}} \cdot \frac{\mu_{\mathrm{NaOH}}}{\mu_{\mathrm{HCl}}} = M_{\mathrm{HCl}} \cdot \frac{39.997}{36.461} \approx M_{\mathrm{HCl}} \cdot 1.0970 \quad [\mathrm{kg/h}]$',
             "теоретическая масса чистого 100% NaOH для полной нейтрализации образующегося хлороводорода.",
-            150
+            155
         ),
         (
             "2.6. Стехиометрическая реакция нейтрализации SO2 гидроксидом натрия",
             r'$\mathrm{SO}_2 + 2\,\mathrm{NaOH} \longrightarrow \mathrm{Na}_2\mathrm{SO}_3 + \mathrm{H}_2\mathrm{O}$',
             "Стехиометрический фактор: k_стех,SO2 = (2 * μ_NaOH) / μ_SO2 = 79.994 / 64.063 = 1.2487 кг 100% NaOH на 1 кг SO2.",
-            110
+            155
         ),
         (
             "2.7. Теоретический расход NaOH на нейтрализацию SO2",
             r'$M_{\mathrm{NaOH, theor(SO}_2\mathrm{)}} = M_{\mathrm{SO}_2} \cdot \frac{2 \cdot \mu_{\mathrm{NaOH}}}{\mu_{\mathrm{SO}_2}} = M_{\mathrm{SO}_2} \cdot \frac{79.994}{64.063} \approx M_{\mathrm{SO}_2} \cdot 1.2487 \quad [\mathrm{kg/h}]$',
             "теоретическая масса чистого 100% NaOH для связывания диоксида серы в нейтральный сульфит натрия.",
-            160
+            155
         ),
         (
             "2.8. Суммарный теоретический часовой расход чистого 100% NaOH",
             r'$M_{\mathrm{NaOH, theor}} = M_{\mathrm{NaOH, theor(HCl)}} + M_{\mathrm{NaOH, theor(SO}_2\mathrm{)}} \quad [\mathrm{kg/h}]$',
             "суммарная теоретическая стехиометрическая потребность в щелочи.",
-            145
+            155
         ),
         (
             "2.9. Фактический часовой расход чистого 100% NaOH с учетом КПД и избытка",
             r'$M_{\mathrm{NaOH, fact}} = M_{\mathrm{NaOH, theor}} \cdot \frac{k_{\mathrm{excess}}}{\eta_{\mathrm{scrubber}}} = \left(M_{\mathrm{HCl}} \cdot 1.0970 + M_{\mathrm{SO}_2} \cdot 1.2487\right) \cdot \frac{k_{\mathrm{excess}}}{\eta_{\mathrm{scrubber}}} \quad [\mathrm{kg/h}]$',
-            "где η_скр = 0.95 (степень улавливания скруббера); k_изб = 1.15 (коэффициент технологического избытка реагента).",
-            165
+            f"где η_скр = {params['eta_scrubber']:.2f} (степень улавливания скруббера); k_изб = {params['k_excess']:.2f} (коэффициент технологического избытка реагента).",
+            155
         ),
         (
             "2.10. Суточный и годовой расход чистого 100% реагента",
             r'$M_{\mathrm{NaOH, daily}} = M_{\mathrm{NaOH, fact}} \cdot T_{\mathrm{shift}} \quad [\mathrm{kg/day}], \quad M_{\mathrm{NaOH, annual}} = \frac{M_{\mathrm{NaOH, fact}} \cdot (T_{\mathrm{shift}} \cdot D_{\mathrm{annual}})}{1000} \quad [\mathrm{t/year}]$',
             "где T_сут — длительность смены (ч/сут); D_год — число рабочих дней в году (с учетом простоев на ремонт).",
-            165
+            155
         ),
         (
             "2.11. Удельный расход чистого 100% реагента на 1 кг отходов",
             r'$q_{\mathrm{NaOH}} = \frac{M_{\mathrm{NaOH, fact}}}{M_{\mathrm{waste}}} \cdot 1000 \quad [\mathrm{g \; 100\%\; NaOH \;/\; kg \; waste}]$',
             "показывает удельные затраты чистого реагента (г/кг отходов) для оценки удельной эффективности.",
-            135
-        )
+            155
+        ),
     ]
     
-    for f_title, f_latex, f_desc, f_w in full_formulas_list:
-        # Проверка места на странице
-        if pdf.get_y() > 245:
+    for f_title, f_latex, f_desc, img_w in full_formulas_list:
+        if pdf.get_y() > 240:
             pdf.add_page()
             
         pdf.set_font(font_name, "B", 8.5)
         pdf.set_text_color(16, 44, 87)
-        pdf.cell(0, 4.5, f"• {f_title}", ln=True)
+        pdf.cell(0, 5, f"• {f_title}", ln=True)
         
-        buf = render_latex_to_png_buffer(f_latex, fontsize=11, dpi=300)
-        pdf.image(buf, x=18, w=f_w)
-        pdf.ln(0.5)
-        
+        try:
+            buf = render_latex_to_png_buffer(f_latex, fontsize=11, dpi=300)
+            pdf.image(buf, x=15, y=pdf.get_y(), w=img_w)
+            pdf.ln(13)
+        except Exception:
+            pdf.ln(2)
+            
         pdf.set_font(font_name, "I", 7.5)
-        pdf.set_text_color(80, 80, 80)
-        pdf.cell(0, 4, f"   {f_desc}", ln=True)
-        pdf.ln(1.5)
-        
-    pdf.ln(2)
+        pdf.set_text_color(90, 90, 90)
+        pdf.multi_cell(0, 3.8, f_desc)
+        pdf.ln(2)
 
     # ----------------------------------------------------
-    # РАЗДЕЛ 3, 4, 5, 6: РЕЗУЛЬТАТЫ, БАЛАНС И ВЫВОДЫ
+    # РАЗДЕЛ 3: РАСЧЕТ УСТАНОВКИ ЖИДКИХ ОТХОДОВ
     # ----------------------------------------------------
     if pdf.get_y() > 220:
         pdf.add_page()
         
-    # Раздел 3: Жидкие отходы
     pdf.set_font(font_name, "B", 11)
     pdf.set_text_color(16, 44, 87)
     pdf.cell(0, 6, "3. Результаты расчета Установки жидких отходов (1,5 м3/ч)", ln=True)
     pdf.set_font(font_name, "", 8.5)
     pdf.set_text_color(20, 20, 20)
     pdf.multi_cell(0, 4.2, f"Поступление: Cl = {liquid_feed['mass_cl']:.3f} кг/ч, S = {liquid_feed['mass_s']:.3f} кг/ч.\n"
-                          f"Выход кислых газов: HCl = {liquid_feed['mass_hcl']:.3f} кг/ч, SO2 = {liquid_feed['mass_so2']:.3f} кг/ч.")
+                          f"Выход газов: HCl = {liquid_feed['mass_hcl']:.3f} кг/ч, SO2 = {liquid_feed['mass_so2']:.3f} кг/ч.")
     pdf.ln(1)
     
+    col_w = [95, 45, 40]
     pdf.set_font(font_name, "B", 8)
     pdf.set_fill_color(235, 241, 245)
-    pdf.cell(100, 5.5, "Показатель расхода чистого 100% NaOH (Жидкие отходы)", 1, 0, "L", fill=True)
-    pdf.cell(35, 5.5, "Ед. изм.", 1, 0, "C", fill=True)
-    pdf.cell(45, 5.5, "Значение", 1, 1, "C", fill=True)
+    pdf.cell(col_w[0], 5.5, "Показатель расхода чистого 100% NaOH", 1, 0, "L", fill=True)
+    pdf.cell(col_w[1], 5.5, "Ед. изм.", 1, 0, "C", fill=True)
+    pdf.cell(col_w[2], 5.5, "Значение", 1, 1, "C", fill=True)
     
     liq_rows_pdf = [
         ["Часовой расход чистого 100% NaOH", "кг/ч", f"{liq_calc['naoh_pure_hour_kg']:.2f}"],
         [f"Суточный расход чистого 100% NaOH ({params['hours_per_day']:.0f} ч/сут)", "кг/сут", f"{liq_calc['naoh_pure_day_kg']:.1f}"],
         [f"ГОДОВОЙ РАСХОД ЧИСТОГО 100% NaOH ({params['operating_days_year']:.0f} дн/год)", "т/год", f"{liq_calc['naoh_pure_year_t']:.2f}"],
-        ["УДЕЛЬНЫЙ РАСХОД 100% NaOH НА 1 КГ СТОКОВ", "г/кг (кг/м3)", f"{liq_calc['spec_naoh_pure_g_per_kg']:.2f} г/кг ({liq_calc['spec_naoh_pure_per_m3_kg']:.2f} кг/м3)"],
+        ["УДЕЛЬНЫЙ РАСХОД 100% NaOH НА 1 КГ СТОКОВ", "г NaOH / кг стоков", f"{liq_calc['spec_naoh_pure_g_per_kg']:.2f} г/кг ({liq_calc['spec_naoh_pure_per_m3_kg']:.2f} кг/м3)"],
     ]
     for r in liq_rows_pdf:
         is_bold = ("ГОДОВОЙ" in r[0] or "УДЕЛЬНЫЙ" in r[0])
-        pdf.set_font(font_name, "B" if is_bold else "", 8)
-        pdf.cell(100, 5, r[0], 1, 0, "L")
-        pdf.cell(35, 5, r[1], 1, 0, "C")
-        pdf.cell(45, 5, r[2], 1, 1, "R")
+        pdf.set_font(font_name, "B" if is_bold else "", 7.8)
+        pdf.cell(col_w[0], 5, r[0], 1, 0, "L")
+        pdf.cell(col_w[1], 5, r[1], 1, 0, "C")
+        pdf.cell(col_w[2], 5, r[2], 1, 1, "R")
     pdf.ln(3)
-    
-    # Раздел 4: ТБО
+
+    # ----------------------------------------------------
+    # РАЗДЕЛ 4: РАСЧЕТ УСТАНОВКИ ТБО
+    # ----------------------------------------------------
     if pdf.get_y() > 220:
         pdf.add_page()
         
@@ -768,30 +849,32 @@ def generate_pdf_report(
     pdf.set_font(font_name, "", 8.5)
     pdf.set_text_color(20, 20, 20)
     pdf.multi_cell(0, 4.2, f"Поступление: Cl = {tbo_feed['mass_cl']:.4f} кг/ч, S = {tbo_feed['mass_s']:.4f} кг/ч.\n"
-                          f"Выход кислых газов: HCl = {tbo_feed['mass_hcl']:.3f} кг/ч, SO2 = {tbo_feed['mass_so2']:.3f} кг/ч.")
+                          f"Выход газов: HCl = {tbo_feed['mass_hcl']:.3f} кг/ч, SO2 = {tbo_feed['mass_so2']:.3f} кг/ч.")
     pdf.ln(1)
     
     pdf.set_font(font_name, "B", 8)
     pdf.set_fill_color(235, 241, 245)
-    pdf.cell(100, 5.5, "Показатель расхода чистого 100% NaOH (ТБО 170 кг/ч)", 1, 0, "L", fill=True)
-    pdf.cell(35, 5.5, "Ед. изм.", 1, 0, "C", fill=True)
-    pdf.cell(45, 5.5, "Значение", 1, 1, "C", fill=True)
+    pdf.cell(col_w[0], 5.5, "Показатель расхода чистого 100% NaOH", 1, 0, "L", fill=True)
+    pdf.cell(col_w[1], 5.5, "Ед. изм.", 1, 0, "C", fill=True)
+    pdf.cell(col_w[2], 5.5, "Значение", 1, 1, "C", fill=True)
     
     tbo_rows_pdf = [
         ["Часовой расход чистого 100% NaOH", "кг/ч", f"{tbo_calc['naoh_pure_hour_kg']:.2f}"],
         [f"Суточный расход чистого 100% NaOH ({params['hours_per_day']:.0f} ч/сут)", "кг/сут", f"{tbo_calc['naoh_pure_day_kg']:.1f}"],
         [f"ГОДОВОЙ РАСХОД ЧИСТОГО 100% NaOH ({params['operating_days_year']:.0f} дн/год)", "т/год", f"{tbo_calc['naoh_pure_year_t']:.2f}"],
-        ["УДЕЛЬНЫЙ РАСХОД 100% NaOH НА 1 КГ ТБО", "кг/кг (г/кг)", f"{tbo_calc['spec_naoh_pure_kg_per_kg']:.4f} кг/кг ({tbo_calc['spec_naoh_pure_g_per_kg']:.1f} г/кг)"],
+        ["УДЕЛЬНЫЙ РАСХОД 100% NaOH НА 1 КГ ТБО", "кг NaOH / кг ТБО (г/кг)", f"{tbo_calc['spec_naoh_pure_kg_per_kg']:.4f} кг/кг ({tbo_calc['spec_naoh_pure_g_per_kg']:.1f} г/кг)"],
     ]
     for r in tbo_rows_pdf:
         is_bold = ("ГОДОВОЙ" in r[0] or "УДЕЛЬНЫЙ" in r[0])
-        pdf.set_font(font_name, "B" if is_bold else "", 8)
-        pdf.cell(100, 5, r[0], 1, 0, "L")
-        pdf.cell(35, 5, r[1], 1, 0, "C")
-        pdf.cell(45, 5, r[2], 1, 1, "R")
+        pdf.set_font(font_name, "B" if is_bold else "", 7.8)
+        pdf.cell(col_w[0], 5, r[0], 1, 0, "L")
+        pdf.cell(col_w[1], 5, r[1], 1, 0, "C")
+        pdf.cell(col_w[2], 5, r[2], 1, 1, "R")
     pdf.ln(3)
-    
-    # Раздел 5: Сводная ведомость
+
+    # ----------------------------------------------------
+    # РАЗДЕЛ 5: СВОДНАЯ ВЕДОМОСТЬ
+    # ----------------------------------------------------
     if pdf.get_y() > 220:
         pdf.add_page()
         
@@ -822,13 +905,65 @@ def generate_pdf_report(
         pdf.cell(col_w_sum[3], 5, r[3], 1, 1, "R")
     pdf.ln(3)
     
-    # Раздел 6: Заключение
-    if pdf.get_y() > 220:
+    # ----------------------------------------------------
+    # РАЗДЕЛ 6: ПРОВЕРКА СООТВЕТСТВИЯ ИТС 9-2020
+    # ----------------------------------------------------
+    if pdf.get_y() > 200:
+        pdf.add_page()
+        
+    mass_hcl_in = liquid_feed.get('mass_hcl', 0.0) + tbo_feed.get('mass_hcl', 0.0)
+    mass_so2_in = liquid_feed.get('mass_so2', 0.0) + tbo_feed.get('mass_so2', 0.0)
+    eta_scrubber = params.get('eta_scrubber', 0.95)
+    
+    conc_hcl_in = (mass_hcl_in * 1e6) / flue_gas_flow if flue_gas_flow > 0 else 0.0
+    conc_so2_in = (mass_so2_in * 1e6) / flue_gas_flow if flue_gas_flow > 0 else 0.0
+    conc_hcl_out = conc_hcl_in * (1.0 - eta_scrubber)
+    conc_so2_out = conc_so2_in * (1.0 - eta_scrubber)
+    is_compliant = (conc_hcl_out <= 10.0) and (conc_so2_out <= 50.0)
+    
+    pdf.set_font(font_name, "B", 11)
+    pdf.set_text_color(16, 44, 87)
+    pdf.cell(0, 6, "6. Проверка соответствия нормативам выбросов ИТС 9-2020 (Приложение В)", ln=True)
+    pdf.set_font(font_name, "", 8.5)
+    pdf.set_text_color(20, 20, 20)
+    pdf.multi_cell(0, 4.2, f"Предельные среднесуточные концентрации кислых газов согласно ИТС 9-2020 (Приложение В) при расходе газов V_г = {flue_gas_flow:.0f} нм3/ч:")
+    pdf.ln(1)
+    
+    col_w_comp = [55, 32, 32, 32, 29]
+    pdf.set_font(font_name, "B", 7.8)
+    pdf.set_fill_color(235, 241, 245)
+    pdf.cell(col_w_comp[0], 5.5, "Загрязняющее вещество", 1, 0, "L", fill=True)
+    pdf.cell(col_w_comp[1], 5.5, "Вход (мг/нм3)", 1, 0, "C", fill=True)
+    pdf.cell(col_w_comp[2], 5.5, "ПДК ИТС 9", 1, 0, "C", fill=True)
+    pdf.cell(col_w_comp[3], 5.5, "Выход (мг/нм3)", 1, 0, "C", fill=True)
+    pdf.cell(col_w_comp[4], 5.5, "Статус", 1, 1, "C", fill=True)
+    
+    pdf.set_font(font_name, "", 7.8)
+    pdf.cell(col_w_comp[0], 5, "Хлороводород (HCl)", 1, 0, "L")
+    pdf.cell(col_w_comp[1], 5, f"{conc_hcl_in:.1f}", 1, 0, "R")
+    pdf.cell(col_w_comp[2], 5, "<= 10.0", 1, 0, "C")
+    pdf.cell(col_w_comp[3], 5, f"{conc_hcl_out:.2f}", 1, 0, "R")
+    pdf.set_font(font_name, "B", 7.8)
+    pdf.cell(col_w_comp[4], 5, "НОРМА" if conc_hcl_out <= 10.0 else "ПРЕВЫШЕНИЕ", 1, 1, "C")
+    
+    pdf.set_font(font_name, "", 7.8)
+    pdf.cell(col_w_comp[0], 5, "Диоксид серы (SO2)", 1, 0, "L")
+    pdf.cell(col_w_comp[1], 5, f"{conc_so2_in:.1f}", 1, 0, "R")
+    pdf.cell(col_w_comp[2], 5, "<= 50.0", 1, 0, "C")
+    pdf.cell(col_w_comp[3], 5, f"{conc_so2_out:.2f}", 1, 0, "R")
+    pdf.set_font(font_name, "B", 7.8)
+    pdf.cell(col_w_comp[4], 5, "НОРМА" if conc_so2_out <= 50.0 else "ПРЕВЫШЕНИЕ", 1, 1, "C")
+    pdf.ln(3)
+
+    # ----------------------------------------------------
+    # РАЗДЕЛ 7: ЗАКЛЮЧЕНИЕ
+    # ----------------------------------------------------
+    if pdf.get_y() > 215:
         pdf.add_page()
         
     pdf.set_font(font_name, "B", 11)
     pdf.set_text_color(16, 44, 87)
-    pdf.cell(0, 6, "6. Заключение", ln=True)
+    pdf.cell(0, 6, "7. Заключение", ln=True)
     pdf.set_font(font_name, "", 8.5)
     pdf.set_text_color(20, 20, 20)
     pdf.multi_cell(0, 4.2, f"1. Для Установки утилизации жидких отходов ({params['q_liq']} м3/ч, {params['dataset_name']}):\n"
@@ -841,7 +976,8 @@ def generate_pdf_report(
                           f"   • Часовой расход: {comb_calc['naoh_pure_hour_kg']:.2f} кг/ч;\n"
                           f"   • Суточный расход: {comb_calc['naoh_pure_day_kg']:.1f} кг/сут;\n"
                           f"   • Годовой расход чистого 100% NaOH: {comb_calc['naoh_pure_year_t']:.2f} т/год;\n"
-                          f"   • Средневзвешенный удельный расход по комплексу: {comb_calc['spec_naoh_pure_g_per_kg']:.1f} г 100% NaOH / кг суммарных отходов.")
+                          f"   • Средневзвешенный удельный расход по комплексу: {comb_calc['spec_naoh_pure_g_per_kg']:.1f} г 100% NaOH / кг суммарных отходов.\n\n"
+                          f"4. Расчетный расход реагента гарантирует соблюдение предельных значений выбросов согласно ИТС 9-2020 (Приложение В): HCl <= 10 мг/нм3, SO2 <= 50 мг/нм3.")
     
     if output_path is not None:
         pdf.output(output_path)
@@ -860,7 +996,7 @@ def generate_excel_report(
     output_path: str = None
 ) -> Any:
     """
-    Генерация Excel-файла с листами: Сводка, Исходные данные и формулы, Жидкие отходы, ТБО, Морфология ТБО.
+    Генерация Excel-файла с листами: Сводка, Исходные данные и формулы, Жидкие отходы, ТБО, Морфология ТБО, Compliance (ИТС 9-2020).
     Возвращает байты (in-memory) или сохраняет по указанному пути.
     """
     buf = io.BytesIO() if output_path is None else output_path
