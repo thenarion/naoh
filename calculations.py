@@ -315,24 +315,25 @@ def calculate_single_stream_consumption(
     mass_hcl_neut = mass_hcl_gas * eta_scrubber
     mass_so2_neut = mass_so2_gas * eta_scrubber
     
-    # Фактические выходные концентрации в очищенных газах после скруббера (мг/нм³)
     conc_hcl_out = conc_hcl_in * (1.0 - eta_scrubber)
     conc_so2_out = conc_so2_in * (1.0 - eta_scrubber)
 
-    
     # 4. Стехиометрические коэффициенты
     stoich_hcl = M_NaOH / M_HCl         # ~1.09697 кг NaOH / кг HCl
     stoich_so2 = (2 * M_NaOH) / M_SO2   # ~1.24867 кг NaOH / кг SO2
     
-    # 5. Теоретический расход 100% NaOH на нейтрализацию уловленных кислых газов (кг/ч)
-    naoh_hcl_theor = mass_hcl_neut * stoich_hcl
-    naoh_so2_theor = mass_so2_neut * stoich_so2
+    # 5. Теоретический расход 100% NaOH на нейтрализацию кислых газов (кг/ч)
+    naoh_hcl_theor = mass_hcl_gas * stoich_hcl
+    naoh_so2_theor = mass_so2_gas * stoich_so2
     naoh_total_theor = naoh_hcl_theor + naoh_so2_theor
     
-    # 6. Фактический часовой расход 100% NaOH с учетом технологического избытка k_изб (кг/ч)
-    naoh_hcl_fact = naoh_hcl_theor * k_excess
-    naoh_so2_fact = naoh_so2_theor * k_excess
+    # 6. Фактический часовой расход 100% NaOH с учетом эффективности массообмена скруббера и избытка (кг/ч)
+    # Чем эффективнее скруббер (выше eta_scrubber), тем выше коэффициент полезного использования реагента и МЕНЬШЕ затрат NaOH
+    k_eff = (k_excess / eta_scrubber) if eta_scrubber > 0 else k_excess
+    naoh_hcl_fact = naoh_hcl_theor * k_eff
+    naoh_so2_fact = naoh_so2_theor * k_eff
     naoh_total_fact = naoh_hcl_fact + naoh_so2_fact
+
     
     # 7. Режим работы: часы в сутки и дни в году
     operating_hours_year = hours_per_day * operating_days_year
@@ -578,13 +579,15 @@ def calculate_naoh_and_compliance(
     stoich_hcl = M_NaOH / M_HCl         # ~1.09697 кг NaOH / кг HCl
     stoich_so2 = (2 * M_NaOH) / M_SO2   # ~1.24867 кг NaOH / кг SO2
     
-    naoh_hcl_theor = mass_hcl_neut_total * stoich_hcl
-    naoh_so2_theor = mass_so2_neut_total * stoich_so2
+    naoh_hcl_theor = mass_hcl_in_total * stoich_hcl
+    naoh_so2_theor = mass_so2_in_total * stoich_so2
     naoh_total_theor = naoh_hcl_theor + naoh_so2_theor
     
-    naoh_hcl_fact = naoh_hcl_theor * k_excess
-    naoh_so2_fact = naoh_so2_theor * k_excess
+    k_eff = (k_excess / eta_scrubber) if eta_scrubber > 0 else k_excess
+    naoh_hcl_fact = naoh_hcl_theor * k_eff
+    naoh_so2_fact = naoh_so2_theor * k_eff
     naoh_total_fact = naoh_hcl_fact + naoh_so2_fact
+
     
     operating_hours_year = hours_per_day * operating_days_year
     naoh_pure_day_kg = naoh_total_fact * hours_per_day
