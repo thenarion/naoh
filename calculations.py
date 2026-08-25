@@ -290,7 +290,7 @@ def calculate_single_stream_consumption(
     feed_mass_kg_h: float,
     k_conv_cl: float = 1.0,
     k_conv_s: float = 1.0,
-    flue_gas_flow: float = 3000.0,
+    flue_gas_flow: float = 30000.0,
     k_excess: float = 1.15,
     limit_hcl: float = 10.0,
     limit_so2: float = 50.0,
@@ -303,40 +303,40 @@ def calculate_single_stream_consumption(
     Расчет расхода 100% чистого NaOH для достижения нормативов ИТС 9-2020
     (HCl ≤ 10 мг/нм³, SO₂ ≤ 50 мг/нм³) в зависимости от расхода дымовых газов flue_gas_flow (нм³/ч).
     """
-    # 1. Входные концентрации в дымовых газах (мг/нм³)
+    # 1. Входные концентрации в сырых дымовых газах (мг/нм³)
     conc_hcl_in = (mass_hcl_gas * 1e6) / flue_gas_flow if flue_gas_flow > 0 else 0.0
     conc_so2_in = (mass_so2_gas * 1e6) / flue_gas_flow if flue_gas_flow > 0 else 0.0
     
-    # 2. Требуемая степень очистки для достижения нормативов ИТС 9-2020 (HCl ≤ 10, SO2 ≤ 50 мг/нм³)
+    # 2. Выходные концентрации газов (при достижении целевых нормативов ПДК ИТС 9-2020)
+    # Если входная концентрация выше нормы, газ очищается до норматива.
+    # Если входная концентрация уже ниже нормы, очистка не требуется, выход равен входу.
+    conc_hcl_out = min(conc_hcl_in, limit_hcl)
+    conc_so2_out = min(conc_so2_in, limit_so2)
+    
+    # 3. Требуемая степень очистки для выхода на норматив
     eta_req_hcl = max(0.0, 1.0 - (limit_hcl / conc_hcl_in)) if conc_hcl_in > limit_hcl else 0.0
     eta_req_so2 = max(0.0, 1.0 - (limit_so2 / conc_so2_in)) if conc_so2_in > limit_so2 else 0.0
     
-    # 3. Масса кислых газов, подлежащая улавливанию для достижения нормативов ПДК (кг/ч)
-    mass_hcl_neut = mass_hcl_gas * eta_req_hcl
-    mass_so2_neut = mass_so2_gas * eta_req_so2
-    
-    # 4. Фактические выходные концентрации после скруббера (мг/нм³)
-    conc_hcl_out = conc_hcl_in * (1.0 - eta_scrubber)
-    conc_so2_out = conc_so2_in * (1.0 - eta_scrubber)
+    # 4. Масса кислых газов, подлежащая нейтрализации щелочью для достижения норматива ПДК (кг/ч)
+    delta_conc_hcl = max(0.0, conc_hcl_in - limit_hcl)
+    delta_conc_so2 = max(0.0, conc_so2_in - limit_so2)
+    mass_hcl_neut = (delta_conc_hcl * flue_gas_flow) / 1e6 if flue_gas_flow > 0 else 0.0
+    mass_so2_neut = (delta_conc_so2 * flue_gas_flow) / 1e6 if flue_gas_flow > 0 else 0.0
 
     # Стехиометрические коэффициенты
-
-
     stoich_hcl = M_NaOH / M_HCl         # ~1.09697 кг NaOH / кг HCl
     stoich_so2 = (2 * M_NaOH) / M_SO2   # ~1.24867 кг NaOH / кг SO2
     
-    # 5. Теоретический расход 100% NaOH на нейтрализацию уловленных газов (кг/ч)
+    # 5. Теоретический расход 100% NaOH на нейтрализацию до нормативов ПДК (кг/ч)
     naoh_hcl_theor = mass_hcl_neut * stoich_hcl
     naoh_so2_theor = mass_so2_neut * stoich_so2
     naoh_total_theor = naoh_hcl_theor + naoh_so2_theor
     
-    # 6. Фактический часовой расход 100% NaOH с учетом эффективности массообмена скруббера и избытка (кг/ч)
-    # 1) от V_газов: через eta_req (чем больше V_г, тем меньше eta_req и меньше масса улавливания)
-    # 2) от eta_scrubber: чем выше КПД скруббера, тем выше полезное использование реагента и МЕНЬШЕ расход NaOH
-    k_eff = (k_excess / eta_scrubber) if eta_scrubber > 0 else k_excess
-    naoh_hcl_fact = naoh_hcl_theor * k_eff
-    naoh_so2_fact = naoh_so2_theor * k_eff
+    # 6. Фактический часовой расход 100% NaOH с учетом коэффициента избытка k_изб (кг/ч)
+    naoh_hcl_fact = naoh_hcl_theor * k_excess
+    naoh_so2_fact = naoh_so2_theor * k_excess
     naoh_total_fact = naoh_hcl_fact + naoh_so2_fact
+
 
 
     
@@ -410,7 +410,7 @@ def calculate_single_stream_consumption(
 
 def calculate_liquid_installation_naoh(
     liquid_results: Dict[str, Any],
-    flue_gas_flow: float = 2500.0,
+    flue_gas_flow: float = 30000.0,
     k_excess: float = 1.15,
     eta_scrubber: float = 0.95,
     hours_per_day: float = 24.0,
@@ -443,7 +443,7 @@ def calculate_liquid_installation_naoh(
 
 def calculate_tbo_installation_naoh(
     tbo_results: Dict[str, Any],
-    flue_gas_flow: float = 800.0,
+    flue_gas_flow: float = 15000.0,
     k_excess: float = 1.15,
     eta_scrubber: float = 0.95,
     hours_per_day: float = 24.0,
@@ -481,8 +481,8 @@ def calculate_combined_installations_naoh(
     """
     Сводный расчет при совместной работе обеих автономных установок с раздельными потоками газов.
     """
-    flue_gas_flow_liq = liquid_res_calc.get("flue_gas_flow", 2500.0)
-    flue_gas_flow_tbo = tbo_res_calc.get("flue_gas_flow", 800.0)
+    flue_gas_flow_liq = liquid_res_calc.get("flue_gas_flow", 30000.0)
+    flue_gas_flow_tbo = tbo_res_calc.get("flue_gas_flow", 15000.0)
     flue_gas_flow_total = flue_gas_flow_liq + flue_gas_flow_tbo
     
     pure_hour = liquid_res_calc["naoh_pure_hour_kg"] + tbo_res_calc["naoh_pure_hour_kg"]
@@ -517,8 +517,8 @@ def calculate_combined_installations_naoh(
 def calculate_naoh_and_compliance(
     liquid_results: Dict[str, Any],
     tbo_results: Dict[str, Any],
-    flue_gas_flow_liq: float = 2500.0,
-    flue_gas_flow_tbo: float = 800.0,
+    flue_gas_flow_liq: float = 30000.0,
+    flue_gas_flow_tbo: float = 15000.0,
     flue_gas_flow: Optional[float] = None,
     eta_scrubber: float = 0.95,
     k_excess: float = 1.15,
@@ -531,12 +531,11 @@ def calculate_naoh_and_compliance(
     Расчет расхода NaOH на достижение нормативов выбросов ИТС 9-2020 (Приложение В)
     для двух автономных установок с раздельными расходами дымовых газов.
     """
-    if flue_gas_flow is not None and flue_gas_flow_liq == 2500.0 and flue_gas_flow_tbo == 800.0:
-        # Для обратной совместимости, если передан один суммарный поток
+    if flue_gas_flow is not None and flue_gas_flow_liq == 30000.0 and flue_gas_flow_tbo == 15000.0:
         feed_l = liquid_results.get('feed_mass_kg_h', 1500.0)
         feed_t = tbo_results.get('feed_mass_kg_h', 170.0)
         tot_f = feed_l + feed_t
-        flue_gas_flow_liq = flue_gas_flow * (feed_l / tot_f) if tot_f > 0 else flue_gas_flow * 0.9
+        flue_gas_flow_liq = flue_gas_flow * (feed_l / tot_f) if tot_f > 0 else flue_gas_flow * (2.0 / 3.0)
         flue_gas_flow_tbo = flue_gas_flow - flue_gas_flow_liq
         
     flue_gas_flow_total = flue_gas_flow_liq + flue_gas_flow_tbo
@@ -546,22 +545,30 @@ def calculate_naoh_and_compliance(
     mass_so2_liq = liquid_results.get('mass_so2', 0.0)
     conc_hcl_in_liq = (mass_hcl_liq * 1e6) / flue_gas_flow_liq if flue_gas_flow_liq > 0 else 0.0
     conc_so2_in_liq = (mass_so2_liq * 1e6) / flue_gas_flow_liq if flue_gas_flow_liq > 0 else 0.0
+    
+    conc_hcl_out_liq = min(conc_hcl_in_liq, 10.0)
+    conc_so2_out_liq = min(conc_so2_in_liq, 50.0)
+    
     eta_req_hcl_liq = max(0.0, 1.0 - (10.0 / conc_hcl_in_liq)) if conc_hcl_in_liq > 10.0 else 0.0
     eta_req_so2_liq = max(0.0, 1.0 - (50.0 / conc_so2_in_liq)) if conc_so2_in_liq > 50.0 else 0.0
 
-    mass_hcl_neut_liq = mass_hcl_liq * eta_req_hcl_liq
-    mass_so2_neut_liq = mass_so2_liq * eta_req_so2_liq
+    mass_hcl_neut_liq = (max(0.0, conc_hcl_in_liq - 10.0) * flue_gas_flow_liq) / 1e6 if flue_gas_flow_liq > 0 else 0.0
+    mass_so2_neut_liq = (max(0.0, conc_so2_in_liq - 50.0) * flue_gas_flow_liq) / 1e6 if flue_gas_flow_liq > 0 else 0.0
 
     # 2. Расчет для ТБО
     mass_hcl_tbo = tbo_results.get('mass_hcl', 0.0)
     mass_so2_tbo = tbo_results.get('mass_so2', 0.0)
     conc_hcl_in_tbo = (mass_hcl_tbo * 1e6) / flue_gas_flow_tbo if flue_gas_flow_tbo > 0 else 0.0
     conc_so2_in_tbo = (mass_so2_tbo * 1e6) / flue_gas_flow_tbo if flue_gas_flow_tbo > 0 else 0.0
+    
+    conc_hcl_out_tbo = min(conc_hcl_in_tbo, 10.0)
+    conc_so2_out_tbo = min(conc_so2_in_tbo, 50.0)
+    
     eta_req_hcl_tbo = max(0.0, 1.0 - (10.0 / conc_hcl_in_tbo)) if conc_hcl_in_tbo > 10.0 else 0.0
     eta_req_so2_tbo = max(0.0, 1.0 - (50.0 / conc_so2_in_tbo)) if conc_so2_in_tbo > 50.0 else 0.0
-    mass_hcl_neut_tbo = mass_hcl_tbo * eta_req_hcl_tbo
-    mass_so2_neut_tbo = mass_so2_tbo * eta_req_so2_tbo
-
+    
+    mass_hcl_neut_tbo = (max(0.0, conc_hcl_in_tbo - 10.0) * flue_gas_flow_tbo) / 1e6 if flue_gas_flow_tbo > 0 else 0.0
+    mass_so2_neut_tbo = (max(0.0, conc_so2_in_tbo - 50.0) * flue_gas_flow_tbo) / 1e6 if flue_gas_flow_tbo > 0 else 0.0
 
     # 3. Суммарные потоки
     mass_hcl_in_total = mass_hcl_liq + mass_hcl_tbo
@@ -574,17 +581,10 @@ def calculate_naoh_and_compliance(
     conc_hcl_in_total = (mass_hcl_in_total * 1e6) / flue_gas_flow_total if flue_gas_flow_total > 0 else 0.0
     conc_so2_in_total = (mass_so2_in_total * 1e6) / flue_gas_flow_total if flue_gas_flow_total > 0 else 0.0
     eta_req_hcl_total = (mass_hcl_neut_total / mass_hcl_in_total) if mass_hcl_in_total > 0 else 0.0
-
     eta_req_so2_total = (mass_so2_neut_total / mass_so2_in_total) if mass_so2_in_total > 0 else 0.0
-    # Концентрации на выходе после скруббера с эффективностью eta_scrubber (мг/нм³)
-    conc_hcl_out_liq = conc_hcl_in_liq * (1.0 - eta_scrubber)
-    conc_so2_out_liq = conc_so2_in_liq * (1.0 - eta_scrubber)
-    conc_hcl_out_tbo = conc_hcl_in_tbo * (1.0 - eta_scrubber)
-    conc_so2_out_tbo = conc_so2_in_tbo * (1.0 - eta_scrubber)
-
-    conc_hcl_out_total = conc_hcl_in_total * (1.0 - eta_scrubber)
-    conc_so2_out_total = conc_so2_in_total * (1.0 - eta_scrubber)
-
+    
+    conc_hcl_out_total = ((conc_hcl_out_liq * flue_gas_flow_liq + conc_hcl_out_tbo * flue_gas_flow_tbo)) / flue_gas_flow_total if flue_gas_flow_total > 0 else 0.0
+    conc_so2_out_total = ((conc_so2_out_liq * flue_gas_flow_liq + conc_so2_out_tbo * flue_gas_flow_tbo)) / flue_gas_flow_total if flue_gas_flow_total > 0 else 0.0
 
     # 4. Стехиометрический и фактический расход 100% NaOH на нейтрализацию
     stoich_hcl = M_NaOH / M_HCl         # ~1.09697 кг NaOH / кг HCl
@@ -594,10 +594,10 @@ def calculate_naoh_and_compliance(
     naoh_so2_theor = mass_so2_neut_total * stoich_so2
     naoh_total_theor = naoh_hcl_theor + naoh_so2_theor
     
-    k_eff = (k_excess / eta_scrubber) if eta_scrubber > 0 else k_excess
-    naoh_hcl_fact = naoh_hcl_theor * k_eff
-    naoh_so2_fact = naoh_so2_theor * k_eff
+    naoh_hcl_fact = naoh_hcl_theor * k_excess
+    naoh_so2_fact = naoh_so2_theor * k_excess
     naoh_total_fact = naoh_hcl_fact + naoh_so2_fact
+
 
 
     

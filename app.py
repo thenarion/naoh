@@ -95,17 +95,18 @@ st.markdown('<div class="sub-header">Раздельные расчеты для 
 st.sidebar.subheader("💨 Дымовые газы установок")
 flue_gas_flow_liq = st.sidebar.number_input(
     "Расход газов (Жидкие отходы), нм³/ч",
-    min_value=50.0, max_value=50000.0, value=2500.0, step=100.0,
+    min_value=50.0, max_value=100000.0, value=30000.0, step=1000.0,
     key="fg_liq_in",
     help="Объем сухих дымовых газов от Установки утилизации жидких отходов (1,5 м³/ч)"
 )
 
 flue_gas_flow_tbo = st.sidebar.number_input(
     "Расход газов (ТБО 170 кг/ч), нм³/ч",
-    min_value=50.0, max_value=50000.0, value=800.0, step=50.0,
+    min_value=50.0, max_value=100000.0, value=15000.0, step=500.0,
     key="fg_tbo_in",
     help="Объем сухих дымовых газов от Установки утилизации ТБО (170 кг/ч)"
 )
+
 
 flue_gas_flow = flue_gas_flow_liq + flue_gas_flow_tbo
 st.sidebar.caption(f"ℹ️ Суммарный объем газов: **{flue_gas_flow:.0f} нм³/ч** ({flue_gas_flow_liq:.0f} + {flue_gas_flow_tbo:.0f})")

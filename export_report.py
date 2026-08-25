@@ -215,9 +215,10 @@ def generate_word_report(
         c.paragraphs[0].runs[0].bold = True
         set_cell_background(c, "EBF1F5")
         
-    flue_gas_flow_liq = params.get('flue_gas_flow_liq', 2500.0)
-    flue_gas_flow_tbo = params.get('flue_gas_flow_tbo', 800.0)
+    flue_gas_flow_liq = params.get('flue_gas_flow_liq', 30000.0)
+    flue_gas_flow_tbo = params.get('flue_gas_flow_tbo', 15000.0)
     flue_gas_flow = params.get('flue_gas_flow', flue_gas_flow_liq + flue_gas_flow_tbo)
+
     
     t_gen = doc.add_table(rows=9, cols=3)
     t_gen.style = 'Table Grid'
@@ -666,9 +667,10 @@ def generate_pdf_report(
     pdf.cell(50, 6, "Обозначение и ед. изм.", 1, 0, "C", fill=True)
     pdf.cell(45, 6, "Значение", 1, 1, "C", fill=True)
     
-    flue_gas_flow_liq = params.get('flue_gas_flow_liq', 2500.0)
-    flue_gas_flow_tbo = params.get('flue_gas_flow_tbo', 800.0)
+    flue_gas_flow_liq = params.get('flue_gas_flow_liq', 30000.0)
+    flue_gas_flow_tbo = params.get('flue_gas_flow_tbo', 15000.0)
     flue_gas_flow = params.get('flue_gas_flow', flue_gas_flow_liq + flue_gas_flow_tbo)
+
     gen_rows_pdf = [
         ["Расход дымовых газов (Жидкие отходы)", "V_г,liq, нм3/ч", f"{flue_gas_flow_liq:.0f}"],
         ["Расход дымовых газов (ТБО)", "V_г,tbo, нм3/ч", f"{flue_gas_flow_tbo:.0f}"],
@@ -1086,9 +1088,10 @@ def generate_excel_report(
             {"Категория": "Режим работы", "Параметр": "Длительность смены в сутки (T_сут)", "Значение": params["hours_per_day"], "Ед. изм.": "ч/сут", "Формула / Примечание": "Задается пользователем"},
             {"Категория": "Режим работы", "Параметр": "Рабочих дней в году с учетом ППР (D_год)", "Значение": params["operating_days_year"], "Ед. изм.": "дн/год", "Формула / Примечание": "С учетом ремонтов/простоев"},
             {"Категория": "Режим работы", "Параметр": "Годовой фонд времени (T_год)", "Значение": params["annual_hours"], "Ед. изм.": "ч/год", "Формула / Примечание": "T_год = T_сут * D_год"},
-            {"Категория": "Дымовые газы", "Параметр": "Расход газов Установки жидких отходов (V_г,liq)", "Значение": params.get("flue_gas_flow_liq", 2500.0), "Ед. изм.": "нм3/ч", "Формула / Примечание": "КТОЖС 1,5 м3/ч"},
-            {"Категория": "Дымовые газы", "Параметр": "Расход газов Установки ТБО (V_г,tbo)", "Значение": params.get("flue_gas_flow_tbo", 800.0), "Ед. изм.": "нм3/ч", "Формула / Примечание": "ТБО 170 кг/ч"},
-            {"Категория": "Дымовые газы", "Параметр": "Суммарный расход газов комплекса (V_г,общ)", "Значение": params.get("flue_gas_flow", 3300.0), "Ед. изм.": "нм3/ч", "Формула / Примечание": "V_г,liq + V_г,tbo"},
+            {"Категория": "Дымовые газы", "Параметр": "Расход газов Установки жидких отходов (V_г,liq)", "Значение": params.get("flue_gas_flow_liq", 30000.0), "Ед. изм.": "нм3/ч", "Формула / Примечание": "КТОЖС 1,5 м3/ч"},
+            {"Категория": "Дымовые газы", "Параметр": "Расход газов Установки ТБО (V_г,tbo)", "Значение": params.get("flue_gas_flow_tbo", 15000.0), "Ед. изм.": "нм3/ч", "Формула / Примечание": "ТБО 170 кг/ч"},
+            {"Категория": "Дымовые газы", "Параметр": "Суммарный расход газов комплекса (V_г,общ)", "Значение": params.get("flue_gas_flow", 45000.0), "Ед. изм.": "нм3/ч", "Формула / Примечание": "V_г,liq + V_г,tbo"},
+
             {"Категория": "Скруббер", "Параметр": "Паспортная эффективность (η_скр)", "Значение": params["eta_scrubber"], "Ед. изм.": "д.ед.", "Формула / Примечание": "Степень очистки по HCl и SO2"},
             {"Категория": "Скруббер", "Параметр": "Коэффициент избытка реагента (k_изб)", "Значение": params["k_excess"], "Ед. изм.": "д.ед.", "Формула / Примечание": "Технологический запас"},
             {"Категория": "Жидкие отходы", "Параметр": "Расход стоков (Q_liq)", "Значение": params["q_liq"], "Ед. изм.": "м3/ч", "Формула / Примечание": "1500 кг/ч"},
@@ -1129,8 +1132,9 @@ def generate_excel_report(
             df_morph.to_excel(writer, sheet_name="Морфология ТБО", index=False)
 
         # Лист 6: Compliance (ИТС 9-2020)
-        fl_liq = params.get("flue_gas_flow_liq", 2500.0)
-        fl_tbo = params.get("flue_gas_flow_tbo", 800.0)
+        fl_liq = params.get("flue_gas_flow_liq", 30000.0)
+        fl_tbo = params.get("flue_gas_flow_tbo", 15000.0)
+
         c_hcl_in_l = (liquid_feed['mass_hcl'] * 1e6) / fl_liq if fl_liq > 0 else 0.0
         c_so2_in_l = (liquid_feed['mass_so2'] * 1e6) / fl_liq if fl_liq > 0 else 0.0
         c_hcl_in_t = (tbo_feed['mass_hcl'] * 1e6) / fl_tbo if fl_tbo > 0 else 0.0
