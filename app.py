@@ -644,7 +644,7 @@ with tab3:
             "Выход, мг/нм³": f"{liq_calc_res['conc_hcl_out']:.1f}",
             "Требуемая η": f"{liq_calc_res['eta_req_hcl']:.1%}",
             "Выброс в трубу, кг/ч": f"{((liq_calc_res['conc_hcl_out']*flue_gas_flow_liq)/1e6):.4f}",
-            "Статус": "✅ НОРМА"
+            "Статус": "✅ НОРМА" if liq_calc_res['conc_hcl_out'] <= 10.0 else "⚠️ ПРЕВЫШЕНИЕ"
         },
         {
             "Установка": "💧 Уст. №1 (Жидкие отходы, 1,5 м³/ч)",
@@ -655,7 +655,7 @@ with tab3:
             "Выход, мг/нм³": f"{liq_calc_res['conc_so2_out']:.1f}",
             "Требуемая η": f"{liq_calc_res['eta_req_so2']:.1%}",
             "Выброс в трубу, кг/ч": f"{((liq_calc_res['conc_so2_out']*flue_gas_flow_liq)/1e6):.4f}",
-            "Статус": "✅ НОРМА"
+            "Статус": "✅ НОРМА" if liq_calc_res['conc_so2_out'] <= 50.0 else "⚠️ ПРЕВЫШЕНИЕ"
         },
         {
             "Установка": "🗑️ Уст. №2 (ТБО, 170 кг/ч)",
@@ -666,7 +666,7 @@ with tab3:
             "Выход, мг/нм³": f"{tbo_calc_res['conc_hcl_out']:.1f}",
             "Требуемая η": f"{tbo_calc_res['eta_req_hcl']:.1%}",
             "Выброс в трубу, кг/ч": f"{((tbo_calc_res['conc_hcl_out']*flue_gas_flow_tbo)/1e6):.4f}",
-            "Статус": "✅ НОРМА"
+            "Статус": "✅ НОРМА" if tbo_calc_res['conc_hcl_out'] <= 10.0 else "⚠️ ПРЕВЫШЕНИЕ"
         },
         {
             "Установка": "🗑️ Уст. №2 (ТБО, 170 кг/ч)",
@@ -677,8 +677,9 @@ with tab3:
             "Выход, мг/нм³": f"{tbo_calc_res['conc_so2_out']:.1f}",
             "Требуемая η": f"{tbo_calc_res['eta_req_so2']:.1%}",
             "Выброс в трубу, кг/ч": f"{((tbo_calc_res['conc_so2_out']*flue_gas_flow_tbo)/1e6):.4f}",
-            "Статус": "✅ НОРМА"
+            "Статус": "✅ НОРМА" if tbo_calc_res['conc_so2_out'] <= 50.0 else "⚠️ ПРЕВЫШЕНИЕ"
         }
+
     ])
     st.dataframe(df_comp_table, use_container_width=True, hide_index=True)
 

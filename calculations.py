@@ -315,11 +315,12 @@ def calculate_single_stream_consumption(
     mass_hcl_neut = mass_hcl_gas * eta_req_hcl
     mass_so2_neut = mass_so2_gas * eta_req_so2
     
-    # 4. Концентрации на выходе, обеспечиваемые дозированием NaOH под норматив ПДК (мг/нм³)
-    conc_hcl_out = min(conc_hcl_in, limit_hcl)
-    conc_so2_out = min(conc_so2_in, limit_so2)
+    # 4. Фактические выходные концентрации после скруббера (мг/нм³)
+    conc_hcl_out = conc_hcl_in * (1.0 - eta_scrubber)
+    conc_so2_out = conc_so2_in * (1.0 - eta_scrubber)
 
     # Стехиометрические коэффициенты
+
 
     stoich_hcl = M_NaOH / M_HCl         # ~1.09697 кг NaOH / кг HCl
     stoich_so2 = (2 * M_NaOH) / M_SO2   # ~1.24867 кг NaOH / кг SO2
@@ -575,17 +576,15 @@ def calculate_naoh_and_compliance(
     eta_req_hcl_total = (mass_hcl_neut_total / mass_hcl_in_total) if mass_hcl_in_total > 0 else 0.0
 
     eta_req_so2_total = (mass_so2_neut_total / mass_so2_in_total) if mass_so2_in_total > 0 else 0.0
-    # Концентрации на выходе после очистки под нормативы ИТС 9-2020 (мг/нм³)
+    # Концентрации на выходе после скруббера с эффективностью eta_scrubber (мг/нм³)
+    conc_hcl_out_liq = conc_hcl_in_liq * (1.0 - eta_scrubber)
+    conc_so2_out_liq = conc_so2_in_liq * (1.0 - eta_scrubber)
+    conc_hcl_out_tbo = conc_hcl_in_tbo * (1.0 - eta_scrubber)
+    conc_so2_out_tbo = conc_so2_in_tbo * (1.0 - eta_scrubber)
 
-    conc_hcl_out_liq = min(conc_hcl_in_liq, 10.0)
-    conc_so2_out_liq = min(conc_so2_in_liq, 50.0)
-    conc_hcl_out_tbo = min(conc_hcl_in_tbo, 10.0)
-    conc_so2_out_tbo = min(conc_so2_in_tbo, 50.0)
+    conc_hcl_out_total = conc_hcl_in_total * (1.0 - eta_scrubber)
+    conc_so2_out_total = conc_so2_in_total * (1.0 - eta_scrubber)
 
-    mass_hcl_out_total = (mass_hcl_in_total - mass_hcl_neut_total)
-    mass_so2_out_total = (mass_so2_in_total - mass_so2_neut_total)
-    conc_hcl_out_total = (mass_hcl_out_total * 1e6) / flue_gas_flow_total if flue_gas_flow_total > 0 else 0.0
-    conc_so2_out_total = (mass_so2_out_total * 1e6) / flue_gas_flow_total if flue_gas_flow_total > 0 else 0.0
 
     # 4. Стехиометрический и фактический расход 100% NaOH на нейтрализацию
     stoich_hcl = M_NaOH / M_HCl         # ~1.09697 кг NaOH / кг HCl
