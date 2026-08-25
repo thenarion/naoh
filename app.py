@@ -92,14 +92,23 @@ st.markdown('<div class="sub-header">Раздельные расчеты для 
 # ==============================================================================
 # SIDEBAR: РЕЖИМ РАБОТЫ, СМЕНЫ И ТЕХНОЛОГИЧЕСКИЕ ПАРАМЕТРЫ
 # ==============================================================================
-st.sidebar.header("⚙️ Технологические параметры")
-
-st.sidebar.subheader("Дымовые газы")
-flue_gas_flow = st.sidebar.number_input(
-    "Расход дымовых газов, нм³/ч",
-    min_value=100.0, max_value=50000.0, value=3000.0, step=100.0,
-    help="Определяет объем газов, в котором рассчитываются концентрации загрязнителей. Расход NaOH рассчитывается напрямую для достижения нормативов ИТС 9-2020 (HCl ≤ 10 мг/нм³, SO₂ ≤ 50 мг/нм³)"
+st.sidebar.subheader("💨 Дымовые газы установок")
+flue_gas_flow_liq = st.sidebar.number_input(
+    "Расход газов (Жидкие отходы), нм³/ч",
+    min_value=50.0, max_value=50000.0, value=2500.0, step=100.0,
+    key="fg_liq_in",
+    help="Объем сухих дымовых газов от Установки утилизации жидких отходов (1,5 м³/ч)"
 )
+
+flue_gas_flow_tbo = st.sidebar.number_input(
+    "Расход газов (ТБО 170 кг/ч), нм³/ч",
+    min_value=50.0, max_value=50000.0, value=800.0, step=50.0,
+    key="fg_tbo_in",
+    help="Объем сухих дымовых газов от Установки утилизации ТБО (170 кг/ч)"
+)
+
+flue_gas_flow = flue_gas_flow_liq + flue_gas_flow_tbo
+st.sidebar.caption(f"ℹ️ Суммарный объем газов: **{flue_gas_flow:.0f} нм³/ч** ({flue_gas_flow_liq:.0f} + {flue_gas_flow_tbo:.0f})")
 
 with st.sidebar.expander("⏱️ График эксплуатации и простои", expanded=True):
     hours_per_day = st.number_input(
@@ -228,16 +237,15 @@ with tab1:
     # Отдельный расчет расхода чистого 100% NaOH на соблюдение нормативов ИТС 9-2020
     liq_calc_res = calculate_liquid_installation_naoh(
         liquid_results=active_liq_feed,
-        flue_gas_flow=flue_gas_flow,
+        flue_gas_flow=flue_gas_flow_liq,
         k_excess=k_excess,
         eta_scrubber=eta_scrubber,
         hours_per_day=hours_per_day,
-        operating_days_year=operating_days_year,
-        total_feed_mass=total_feed_mass_est
+        operating_days_year=operating_days_year
     )
     
     st.markdown("---")
-    st.markdown(f"#### 📊 Результаты расчета чистого 100% NaOH ({active_liq_title}):")
+    st.markdown(f"#### 📊 Результаты расчета чистого 100% NaOH ({active_liq_title}, V_г = {flue_gas_flow_liq:.0f} нм³/ч):")
     
     # KPI карточки
     l_kpi1, l_kpi2, l_kpi3 = st.columns(3)
@@ -389,16 +397,15 @@ with tab2:
     # Отдельный расчет расхода чистого 100% NaOH для Установки ТБО на соблюдение нормативов ИТС 9-2020
     tbo_calc_res = calculate_tbo_installation_naoh(
         tbo_results=tbo_feed_res,
-        flue_gas_flow=flue_gas_flow,
+        flue_gas_flow=flue_gas_flow_tbo,
         k_excess=k_excess,
         eta_scrubber=eta_scrubber,
         hours_per_day=hours_per_day,
-        operating_days_year=operating_days_year,
-        total_feed_mass=total_feed_mass_est
+        operating_days_year=operating_days_year
     )
     
     st.markdown("---")
-    st.markdown("#### 📊 Результаты расчета чистого 100% NaOH (ТБО 170 кг/ч):")
+    st.markdown(f"#### 📊 Результаты расчета чистого 100% NaOH (ТБО 170 кг/ч, V_г = {flue_gas_flow_tbo:.0f} нм³/ч):")
     
     t_kpi1, t_kpi2, t_kpi3 = st.columns(3)
     with t_kpi1:
@@ -478,7 +485,8 @@ with tab3:
     final_results = calculate_naoh_and_compliance(
         liquid_results=active_liq_feed,
         tbo_results=tbo_feed_res,
-        flue_gas_flow=flue_gas_flow,
+        flue_gas_flow_liq=flue_gas_flow_liq,
+        flue_gas_flow_tbo=flue_gas_flow_tbo,
         eta_scrubber=eta_scrubber,
         k_excess=k_excess,
         eta_co2_abs=0.0,
@@ -505,6 +513,8 @@ with tab3:
         'annual_hours': annual_hours,
         'eta_scrubber': eta_scrubber,
         'k_excess': k_excess,
+        'flue_gas_flow_liq': flue_gas_flow_liq,
+        'flue_gas_flow_tbo': flue_gas_flow_tbo,
         'flue_gas_flow': flue_gas_flow,
         'k_conv_cl_liq': k_conv_cl_liq,
         'k_conv_s_liq': k_conv_s_liq,
@@ -514,28 +524,32 @@ with tab3:
         'final_results': final_results
     }
     
-    # === БЛОК COMPLIANCE ПО ИТС 9-2020 ===
+    # === БЛОК COMPLIANCE ПО ИТС 9-2020 ДЛЯ ОБЕИХ УСТАНОВОК ===
     st.subheader("🛡️ Проверка compliance по ИТС 9-2020 (Приложение В)")
 
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.metric("HCl на входе в скруббер", f"{final_results['conc_hcl_in']:.1f} мг/нм³")
-        st.caption(f"Требуемая эффективность для выхода на ≤10 мг/нм³: **{final_results['eta_req_hcl']:.1%}**")
+        st.markdown(f"**💧 Установка №1: Жидкие ({flue_gas_flow_liq:.0f} нм³/ч)**")
+        st.metric("HCl вх.", f"{final_results['conc_hcl_in_liq']:.1f} мг/нм³", delta=f"η_req: {final_results['eta_req_hcl_liq']:.1%}")
+        st.metric("SO₂ вх.", f"{final_results['conc_so2_in_liq']:.1f} мг/нм³", delta=f"η_req: {final_results['eta_req_so2_liq']:.1%}")
 
     with col2:
-        st.metric("SO₂ на входе в скруббер", f"{final_results['conc_so2_in']:.1f} мг/нм³")
-        st.caption(f"Требуемая эффективность для выхода на ≤50 мг/нм³: **{final_results['eta_req_so2']:.1%}**")
+        st.markdown(f"**🗑️ Установка №2: ТБО ({flue_gas_flow_tbo:.0f} нм³/ч)**")
+        st.metric("HCl вх.", f"{final_results['conc_hcl_in_tbo']:.1f} мг/нм³", delta=f"η_req: {final_results['eta_req_hcl_tbo']:.1%}")
+        st.metric("SO₂ вх.", f"{final_results['conc_so2_in_tbo']:.1f} мг/нм³", delta=f"η_req: {final_results['eta_req_so2_tbo']:.1%}")
 
     with col3:
+        st.markdown("**Статус соответствия ПДК**")
         st.markdown(f"### {final_results['compliance_status']}")
         if final_results['compliance_msg']:
             st.warning(final_results['compliance_msg'])
         else:
-            st.success("Текущая эффективность скруббера достаточна для соблюдения нормативов.")
+            st.success(f"Паспортная эффективность скрубберов ({eta_scrubber:.1%}) достаточна для нормативов ИТС 9-2020 (HCl ≤ 10, SO₂ ≤ 50 мг/нм³).")
 
     st.markdown("---")
     st.markdown(f"**График работы:** {hours_per_day:.0f} ч/сутки • {operating_days_year:.0f} рабочих дней в году • Общий фонд: **{annual_hours:.0f} ч/год**")
+
 
     
     # Сводная таблица

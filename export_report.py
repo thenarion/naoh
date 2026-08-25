@@ -215,13 +215,29 @@ def generate_word_report(
         c.paragraphs[0].runs[0].bold = True
         set_cell_background(c, "EBF1F5")
         
-    flue_gas_flow = params.get('flue_gas_flow', 3000.0)
+    flue_gas_flow_liq = params.get('flue_gas_flow_liq', 2500.0)
+    flue_gas_flow_tbo = params.get('flue_gas_flow_tbo', 800.0)
+    flue_gas_flow = params.get('flue_gas_flow', flue_gas_flow_liq + flue_gas_flow_tbo)
+    
+    t_gen = doc.add_table(rows=9, cols=3)
+    t_gen.style = 'Table Grid'
+    t_gen.alignment = WD_TABLE_ALIGNMENT.CENTER
+    
+    headers_gen = ["Параметр технологического режима", "Обозначение и ед. изм.", "Значение"]
+    for i, h in enumerate(headers_gen):
+        c = t_gen.cell(0, i)
+        c.text = h
+        c.paragraphs[0].runs[0].bold = True
+        set_cell_background(c, "EBF1F5")
+        
     gen_rows = [
-        ["Расход дымовых газов (сухих)", "V_г, нм³/ч", f"{flue_gas_flow:.0f}"],
+        ["Расход дымовых газов Установки жидких отходов", "V_г,liq, нм³/ч", f"{flue_gas_flow_liq:.0f}"],
+        ["Расход дымовых газов Установки ТБО", "V_г,tbo, нм³/ч", f"{flue_gas_flow_tbo:.0f}"],
+        ["Суммарный расход дымовых газов комплекса", "V_г,общ, нм³/ч", f"{flue_gas_flow:.0f}"],
         ["Длительность рабочей смены в сутки", "T_сут, ч/сут", f"{params['hours_per_day']:.0f}"],
         ["Количество рабочих дней в году (с учетом ремонта/простоев)", "D_год, дн/год", f"{params['operating_days_year']:.0f}"],
         ["Годовой фонд рабочего времени", "T_год, ч/год", f"{params['annual_hours']:.0f}"],
-        ["Степень улавливания кислых газов в скруббере", "η_скр, д.ед.", f"{params['eta_scrubber']:.2f}"],
+        ["Паспортная степень улавливания скруббера", "η_скр, д.ед.", f"{params['eta_scrubber']:.2f}"],
         ["Коэффициент технологического избытка NaOH", "k_изб, д.ед.", f"{params['k_excess']:.2f}"],
     ]
     for row_i, r_data in enumerate(gen_rows, start=1):
@@ -233,6 +249,7 @@ def generate_word_report(
                 c.paragraphs[0].runs[0].bold = True
                 
     doc.add_paragraph().paragraph_format.space_after = Pt(4)
+
     
     k_c_cl_liq = params.get('k_conv_cl_liq', params.get('k_conv_cl', 0.95))
     k_c_s_liq = params.get('k_conv_s_liq', params.get('k_conv_s', 0.85))
@@ -479,17 +496,25 @@ def generate_word_report(
     # ----------------------------------------------------
     # РАЗДЕЛ 6: ПРОВЕРКА СООТВЕТСТВИЯ ИТС 9-2020
     # ----------------------------------------------------
-    mass_hcl_in = liquid_feed.get('mass_hcl', 0.0) + tbo_feed.get('mass_hcl', 0.0)
-    mass_so2_in = liquid_feed.get('mass_so2', 0.0) + tbo_feed.get('mass_so2', 0.0)
     eta_scrubber = params.get('eta_scrubber', 0.95)
     
-    conc_hcl_in = (mass_hcl_in * 1e6) / flue_gas_flow if flue_gas_flow > 0 else 0.0
-    conc_so2_in = (mass_so2_in * 1e6) / flue_gas_flow if flue_gas_flow > 0 else 0.0
-    conc_hcl_out = conc_hcl_in * (1.0 - eta_scrubber)
-    conc_so2_out = conc_so2_in * (1.0 - eta_scrubber)
-    eta_req_hcl = max(0.0, 1.0 - (10.0 / conc_hcl_in)) if conc_hcl_in > 10.0 else 0.0
-    eta_req_so2 = max(0.0, 1.0 - (50.0 / conc_so2_in)) if conc_so2_in > 50.0 else 0.0
-    is_compliant = (conc_hcl_out <= 10.0) and (conc_so2_out <= 50.0)
+    # 1. Жидкие
+    mass_hcl_liq = liquid_feed.get('mass_hcl', 0.0)
+    mass_so2_liq = liquid_feed.get('mass_so2', 0.0)
+    conc_hcl_in_liq = (mass_hcl_liq * 1e6) / flue_gas_flow_liq if flue_gas_flow_liq > 0 else 0.0
+    conc_so2_in_liq = (mass_so2_liq * 1e6) / flue_gas_flow_liq if flue_gas_flow_liq > 0 else 0.0
+    conc_hcl_out_liq = conc_hcl_in_liq * (1.0 - eta_scrubber)
+    conc_so2_out_liq = conc_so2_in_liq * (1.0 - eta_scrubber)
+    
+    # 2. ТБО
+    mass_hcl_tbo = tbo_feed.get('mass_hcl', 0.0)
+    mass_so2_tbo = tbo_feed.get('mass_so2', 0.0)
+    conc_hcl_in_tbo = (mass_hcl_tbo * 1e6) / flue_gas_flow_tbo if flue_gas_flow_tbo > 0 else 0.0
+    conc_so2_in_tbo = (mass_so2_tbo * 1e6) / flue_gas_flow_tbo if flue_gas_flow_tbo > 0 else 0.0
+    conc_hcl_out_tbo = conc_hcl_in_tbo * (1.0 - eta_scrubber)
+    conc_so2_out_tbo = conc_so2_in_tbo * (1.0 - eta_scrubber)
+
+    is_compliant = (conc_hcl_out_liq <= 10.0) and (conc_so2_out_liq <= 50.0) and (conc_hcl_out_tbo <= 10.0) and (conc_so2_out_tbo <= 50.0)
     
     h6 = doc.add_heading("6. Проверка соответствия нормативам выбросов ИТС 9-2020 (Приложение В)", level=1)
     h6.paragraph_format.space_before = Pt(8)
@@ -497,14 +522,15 @@ def generate_word_report(
     doc.add_paragraph(
         f"Согласно Информационно-техническому справочнику по наилучшим доступным технологиям ИТС 9-2020 "
         f"(Приложение В «Предельные значения выбросов при термическом обезвреживании отходов»), "
-        f"установлены предельные среднесуточные концентрации в сухих дымовых газах (при расчетном расходе {flue_gas_flow:.0f} нм³/ч):"
+        f"установлены предельные среднесуточные концентрации в сухих дымовых газах (HCl ≤ 10 мг/нм³, SO₂ ≤ 50 мг/нм³). "
+        f"Проверка выполнена раздельно для Установки жидких отходов (V_г = {flue_gas_flow_liq:.0f} нм³/ч) и Установки ТБО (V_г = {flue_gas_flow_tbo:.0f} нм³/ч):"
     )
     
-    t_comp = doc.add_table(rows=3, cols=5)
+    t_comp = doc.add_table(rows=5, cols=5)
     t_comp.style = 'Table Grid'
     t_comp.alignment = WD_TABLE_ALIGNMENT.CENTER
     
-    comp_headers = ["Загрязняющее вещество", "Концентрация на входе, мг/нм³", "Норматив ИТС 9-2020, мг/нм³", "Концентрация на выходе, мг/нм³", "Статус"]
+    comp_headers = ["Установка / Загрязняющее вещество", "Концентрация на входе, мг/нм³", "Норматив ИТС 9-2020, мг/нм³", "Концентрация на выходе, мг/нм³", "Статус"]
     for i, h in enumerate(comp_headers):
         c = t_comp.cell(0, i)
         c.text = h
@@ -512,8 +538,10 @@ def generate_word_report(
         set_cell_background(c, "EBF1F5")
         
     comp_rows = [
-        ["Хлороводород (HCl)", f"{conc_hcl_in:.1f}", "≤ 10,0", f"{conc_hcl_out:.2f}", "✅ НОРМА" if conc_hcl_out <= 10.0 else "⚠️ ПРЕВЫШЕНИЕ"],
-        ["Диоксид серы (SO₂)", f"{conc_so2_in:.1f}", "≤ 50,0", f"{conc_so2_out:.2f}", "✅ НОРМА" if conc_so2_out <= 50.0 else "⚠️ ПРЕВЫШЕНИЕ"]
+        ["Уст. №1 (Жидкие): HCl", f"{conc_hcl_in_liq:.1f}", "≤ 10,0", f"{conc_hcl_out_liq:.2f}", "✅ НОРМА" if conc_hcl_out_liq <= 10.0 else "⚠️ ПРЕВЫШЕНИЕ"],
+        ["Уст. №1 (Жидкие): SO₂", f"{conc_so2_in_liq:.1f}", "≤ 50,0", f"{conc_so2_out_liq:.2f}", "✅ НОРМА" if conc_so2_out_liq <= 50.0 else "⚠️ ПРЕВЫШЕНИЕ"],
+        ["Уст. №2 (ТБО): HCl", f"{conc_hcl_in_tbo:.1f}", "≤ 10,0", f"{conc_hcl_out_tbo:.2f}", "✅ НОРМА" if conc_hcl_out_tbo <= 10.0 else "⚠️ ПРЕВЫШЕНИЕ"],
+        ["Уст. №2 (ТБО): SO₂", f"{conc_so2_in_tbo:.1f}", "≤ 50,0", f"{conc_so2_out_tbo:.2f}", "✅ НОРМА" if conc_so2_out_tbo <= 50.0 else "⚠️ ПРЕВЫШЕНИЕ"]
     ]
     for row_i, r_data in enumerate(comp_rows, start=1):
         for col_i, val in enumerate(r_data):
@@ -528,15 +556,15 @@ def generate_word_report(
     doc.add_paragraph().paragraph_format.space_after = Pt(4)
     if is_compliant:
         doc.add_paragraph(
-            f"✅ Расчетные концентрации на выходе из скруббера полностью соответствуют нормативам ИТС 9-2020. "
-            f"Принятая эффективность мокрого скруббера η_скр = {eta_scrubber:.1%} достаточна для гарантированного соблюдения ПДК."
+            f"✅ Расчетные концентрации на выходе из скрубберов обеих установок полностью соответствуют нормативам ИТС 9-2020. "
+            f"Принятая паспортная эффективность мокрых скрубберов η_скр = {eta_scrubber:.1%} достаточна для гарантированного соблюдения ПДК."
         )
     else:
         doc.add_paragraph(
-            f"⚠️ Внимание: Текущая эффективность скруббера ({eta_scrubber:.1%}) недостаточна для выхода на нормативы ИТС 9-2020. "
-            f"Требуемая эффективность: по HCl ≥ {eta_req_hcl:.1%}, по SO₂ ≥ {eta_req_so2:.1%}."
+            f"⚠️ Внимание: Паспортная эффективность скруббера ({eta_scrubber:.1%}) недостаточна для выхода на нормативы ИТС 9-2020 при текущих расходах газов."
         )
     doc.add_paragraph().paragraph_format.space_after = Pt(6)
+
 
     # ----------------------------------------------------
     # РАЗДЕЛ 7: ЗАКЛЮЧЕНИЕ
@@ -634,15 +662,20 @@ def generate_pdf_report(
     pdf.cell(50, 6, "Обозначение и ед. изм.", 1, 0, "C", fill=True)
     pdf.cell(45, 6, "Значение", 1, 1, "C", fill=True)
     
-    flue_gas_flow = params.get('flue_gas_flow', 3000.0)
+    flue_gas_flow_liq = params.get('flue_gas_flow_liq', 2500.0)
+    flue_gas_flow_tbo = params.get('flue_gas_flow_tbo', 800.0)
+    flue_gas_flow = params.get('flue_gas_flow', flue_gas_flow_liq + flue_gas_flow_tbo)
     gen_rows_pdf = [
-        ["Расход дымовых газов (сухих)", "V_г, нм3/ч", f"{flue_gas_flow:.0f}"],
+        ["Расход дымовых газов (Жидкие отходы)", "V_г,liq, нм3/ч", f"{flue_gas_flow_liq:.0f}"],
+        ["Расход дымовых газов (ТБО)", "V_г,tbo, нм3/ч", f"{flue_gas_flow_tbo:.0f}"],
+        ["Суммарный расход дымовых газов комплекса", "V_г,общ, нм3/ч", f"{flue_gas_flow:.0f}"],
         ["Длительность рабочей смены в сутки", "T_сут, ч/сут", f"{params['hours_per_day']:.0f}"],
         ["Количество рабочих дней в году (с учетом ППР)", "D_год, дн/год", f"{params['operating_days_year']:.0f}"],
         ["Годовой фонд рабочего времени", "T_год, ч/год", f"{params['annual_hours']:.0f}"],
-        ["Степень улавливания кислых газов в скруббере", "η_скр, д.ед.", f"{params['eta_scrubber']:.2f}"],
+        ["Паспортная степень улавливания скруббера", "η_скр, д.ед.", f"{params['eta_scrubber']:.2f}"],
         ["Коэффициент технологического избытка NaOH", "k_изб, д.ед.", f"{params['k_excess']:.2f}"],
     ]
+
     for r in gen_rows_pdf:
         pdf.set_font(font_name, "", 8.5)
         pdf.cell(85, 5.5, r[0], 1, 0, "L")
@@ -910,52 +943,60 @@ def generate_pdf_report(
     # ----------------------------------------------------
     # РАЗДЕЛ 6: ПРОВЕРКА СООТВЕТСТВИЯ ИТС 9-2020
     # ----------------------------------------------------
-    if pdf.get_y() > 200:
+    if pdf.get_y() > 190:
         pdf.add_page()
         
-    mass_hcl_in = liquid_feed.get('mass_hcl', 0.0) + tbo_feed.get('mass_hcl', 0.0)
-    mass_so2_in = liquid_feed.get('mass_so2', 0.0) + tbo_feed.get('mass_so2', 0.0)
     eta_scrubber = params.get('eta_scrubber', 0.95)
     
-    conc_hcl_in = (mass_hcl_in * 1e6) / flue_gas_flow if flue_gas_flow > 0 else 0.0
-    conc_so2_in = (mass_so2_in * 1e6) / flue_gas_flow if flue_gas_flow > 0 else 0.0
-    conc_hcl_out = conc_hcl_in * (1.0 - eta_scrubber)
-    conc_so2_out = conc_so2_in * (1.0 - eta_scrubber)
-    is_compliant = (conc_hcl_out <= 10.0) and (conc_so2_out <= 50.0)
+    # 1. Жидкие
+    mass_hcl_liq = liquid_feed.get('mass_hcl', 0.0)
+    mass_so2_liq = liquid_feed.get('mass_so2', 0.0)
+    conc_hcl_in_liq = (mass_hcl_liq * 1e6) / flue_gas_flow_liq if flue_gas_flow_liq > 0 else 0.0
+    conc_so2_in_liq = (mass_so2_liq * 1e6) / flue_gas_flow_liq if flue_gas_flow_liq > 0 else 0.0
+    conc_hcl_out_liq = conc_hcl_in_liq * (1.0 - eta_scrubber)
+    conc_so2_out_liq = conc_so2_in_liq * (1.0 - eta_scrubber)
+    
+    # 2. ТБО
+    mass_hcl_tbo = tbo_feed.get('mass_hcl', 0.0)
+    mass_so2_tbo = tbo_feed.get('mass_so2', 0.0)
+    conc_hcl_in_tbo = (mass_hcl_tbo * 1e6) / flue_gas_flow_tbo if flue_gas_flow_tbo > 0 else 0.0
+    conc_so2_in_tbo = (mass_so2_tbo * 1e6) / flue_gas_flow_tbo if flue_gas_flow_tbo > 0 else 0.0
+    conc_hcl_out_tbo = conc_hcl_in_tbo * (1.0 - eta_scrubber)
+    conc_so2_out_tbo = conc_so2_in_tbo * (1.0 - eta_scrubber)
     
     pdf.set_font(font_name, "B", 11)
     pdf.set_text_color(16, 44, 87)
     pdf.cell(0, 6, "6. Проверка соответствия нормативам выбросов ИТС 9-2020 (Приложение В)", ln=True)
     pdf.set_font(font_name, "", 8.5)
     pdf.set_text_color(20, 20, 20)
-    pdf.multi_cell(0, 4.2, f"Предельные среднесуточные концентрации кислых газов согласно ИТС 9-2020 (Приложение В) при расходе газов V_г = {flue_gas_flow:.0f} нм3/ч:")
+    pdf.multi_cell(0, 4.2, f"Предельные среднесуточные концентрации кислых газов согласно ИТС 9-2020 (Приложение В) для Установки жидких отходов (V_г = {flue_gas_flow_liq:.0f} нм3/ч) и ТБО (V_г = {flue_gas_flow_tbo:.0f} нм3/ч):")
     pdf.ln(1)
     
     col_w_comp = [55, 32, 32, 32, 29]
     pdf.set_font(font_name, "B", 7.8)
     pdf.set_fill_color(235, 241, 245)
-    pdf.cell(col_w_comp[0], 5.5, "Загрязняющее вещество", 1, 0, "L", fill=True)
+    pdf.cell(col_w_comp[0], 5.5, "Установка / Вещество", 1, 0, "L", fill=True)
     pdf.cell(col_w_comp[1], 5.5, "Вход (мг/нм3)", 1, 0, "C", fill=True)
     pdf.cell(col_w_comp[2], 5.5, "ПДК ИТС 9", 1, 0, "C", fill=True)
     pdf.cell(col_w_comp[3], 5.5, "Выход (мг/нм3)", 1, 0, "C", fill=True)
     pdf.cell(col_w_comp[4], 5.5, "Статус", 1, 1, "C", fill=True)
     
-    pdf.set_font(font_name, "", 7.8)
-    pdf.cell(col_w_comp[0], 5, "Хлороводород (HCl)", 1, 0, "L")
-    pdf.cell(col_w_comp[1], 5, f"{conc_hcl_in:.1f}", 1, 0, "R")
-    pdf.cell(col_w_comp[2], 5, "<= 10.0", 1, 0, "C")
-    pdf.cell(col_w_comp[3], 5, f"{conc_hcl_out:.2f}", 1, 0, "R")
-    pdf.set_font(font_name, "B", 7.8)
-    pdf.cell(col_w_comp[4], 5, "НОРМА" if conc_hcl_out <= 10.0 else "ПРЕВЫШЕНИЕ", 1, 1, "C")
-    
-    pdf.set_font(font_name, "", 7.8)
-    pdf.cell(col_w_comp[0], 5, "Диоксид серы (SO2)", 1, 0, "L")
-    pdf.cell(col_w_comp[1], 5, f"{conc_so2_in:.1f}", 1, 0, "R")
-    pdf.cell(col_w_comp[2], 5, "<= 50.0", 1, 0, "C")
-    pdf.cell(col_w_comp[3], 5, f"{conc_so2_out:.2f}", 1, 0, "R")
-    pdf.set_font(font_name, "B", 7.8)
-    pdf.cell(col_w_comp[4], 5, "НОРМА" if conc_so2_out <= 50.0 else "ПРЕВЫШЕНИЕ", 1, 1, "C")
+    comp_pdf_rows = [
+        ["Уст.1 (Жидкие): HCl", f"{conc_hcl_in_liq:.1f}", "<= 10.0", f"{conc_hcl_out_liq:.2f}", "НОРМА" if conc_hcl_out_liq <= 10.0 else "ПРЕВЫШЕНИЕ"],
+        ["Уст.1 (Жидкие): SO2", f"{conc_so2_in_liq:.1f}", "<= 50.0", f"{conc_so2_out_liq:.2f}", "НОРМА" if conc_so2_out_liq <= 50.0 else "ПРЕВЫШЕНИЕ"],
+        ["Уст.2 (ТБО): HCl", f"{conc_hcl_in_tbo:.1f}", "<= 10.0", f"{conc_hcl_out_tbo:.2f}", "НОРМА" if conc_hcl_out_tbo <= 10.0 else "ПРЕВЫШЕНИЕ"],
+        ["Уст.2 (ТБО): SO2", f"{conc_so2_in_tbo:.1f}", "<= 50.0", f"{conc_so2_out_tbo:.2f}", "НОРМА" if conc_so2_out_tbo <= 50.0 else "ПРЕВЫШЕНИЕ"]
+    ]
+    for r in comp_pdf_rows:
+        pdf.set_font(font_name, "", 7.8)
+        pdf.cell(col_w_comp[0], 5, r[0], 1, 0, "L")
+        pdf.cell(col_w_comp[1], 5, r[1], 1, 0, "R")
+        pdf.cell(col_w_comp[2], 5, r[2], 1, 0, "C")
+        pdf.cell(col_w_comp[3], 5, r[3], 1, 0, "R")
+        pdf.set_font(font_name, "B", 7.8)
+        pdf.cell(col_w_comp[4], 5, r[4], 1, 1, "C")
     pdf.ln(3)
+
 
     # ----------------------------------------------------
     # РАЗДЕЛ 7: ЗАКЛЮЧЕНИЕ
@@ -1037,7 +1078,10 @@ def generate_excel_report(
             {"Категория": "Режим работы", "Параметр": "Длительность смены в сутки (T_сут)", "Значение": params["hours_per_day"], "Ед. изм.": "ч/сут", "Формула / Примечание": "Задается пользователем"},
             {"Категория": "Режим работы", "Параметр": "Рабочих дней в году с учетом ППР (D_год)", "Значение": params["operating_days_year"], "Ед. изм.": "дн/год", "Формула / Примечание": "С учетом ремонтов/простоев"},
             {"Категория": "Режим работы", "Параметр": "Годовой фонд времени (T_год)", "Значение": params["annual_hours"], "Ед. изм.": "ч/год", "Формула / Примечание": "T_год = T_сут * D_год"},
-            {"Категория": "Скруббер", "Параметр": "Эффективность улавливания (η_скр)", "Значение": params["eta_scrubber"], "Ед. изм.": "д.ед.", "Формула / Примечание": "Степень очистки по HCl и SO2"},
+            {"Категория": "Дымовые газы", "Параметр": "Расход газов Установки жидких отходов (V_г,liq)", "Значение": params.get("flue_gas_flow_liq", 2500.0), "Ед. изм.": "нм3/ч", "Формула / Примечание": "КТОЖС 1,5 м3/ч"},
+            {"Категория": "Дымовые газы", "Параметр": "Расход газов Установки ТБО (V_г,tbo)", "Значение": params.get("flue_gas_flow_tbo", 800.0), "Ед. изм.": "нм3/ч", "Формула / Примечание": "ТБО 170 кг/ч"},
+            {"Категория": "Дымовые газы", "Параметр": "Суммарный расход газов комплекса (V_г,общ)", "Значение": params.get("flue_gas_flow", 3300.0), "Ед. изм.": "нм3/ч", "Формула / Примечание": "V_г,liq + V_г,tbo"},
+            {"Категория": "Скруббер", "Параметр": "Паспортная эффективность (η_скр)", "Значение": params["eta_scrubber"], "Ед. изм.": "д.ед.", "Формула / Примечание": "Степень очистки по HCl и SO2"},
             {"Категория": "Скруббер", "Параметр": "Коэффициент избытка реагента (k_изб)", "Значение": params["k_excess"], "Ед. изм.": "д.ед.", "Формула / Примечание": "Технологический запас"},
             {"Категория": "Жидкие отходы", "Параметр": "Расход стоков (Q_liq)", "Значение": params["q_liq"], "Ед. изм.": "м3/ч", "Формула / Примечание": "1500 кг/ч"},
             {"Категория": "Жидкие отходы", "Параметр": "Режим фильтрата", "Значение": params["dataset_name"], "Ед. изм.": "-", "Формула / Примечание": "СП 320.1325800.2017, Табл. Г.1"},
@@ -1048,8 +1092,10 @@ def generate_excel_report(
             {"Категория": "ТБО", "Параметр": "Среднее содержание S в ТБО", "Значение": round(tbo_feed["avg_pct_s"], 3), "Ед. изм.": "%", "Формула / Примечание": "M_S = M_ТБО * (S%/100)"},
             {"Категория": "Стехиометрия", "Параметр": "HCl + NaOH -> NaCl + H2O", "Значение": 1.0970, "Ед. изм.": "кг NaOH / кг HCl", "Формула / Примечание": "μ_NaOH / μ_HCl = 39.997 / 36.461"},
             {"Категория": "Стехиометрия", "Параметр": "SO2 + 2NaOH -> Na2SO3 + H2O", "Значение": 1.2487, "Ед. изм.": "кг NaOH / кг SO2", "Формула / Примечание": "2*μ_NaOH / μ_SO2 = 79.994 / 64.063"},
-            {"Категория": "Конверсия в газ", "Параметр": "Конверсия хлора в HCl (k_конв,Cl)", "Значение": params.get("k_conv_cl", 0.98), "Ед. изм.": "д.ед.", "Формула / Примечание": "Доля перехода Cl -> HCl (0.0 - 1.0)"},
-            {"Категория": "Конверсия в газ", "Параметр": "Конверсия серы в SO2 (k_конв,S)", "Значение": params.get("k_conv_s", 0.90), "Ед. изм.": "д.ед.", "Формула / Примечание": "Доля перехода S -> SO2 (0.0 - 1.0)"}
+            {"Категория": "Конверсия в газ", "Параметр": "Конверсия Cl -> HCl (Жидкие)", "Значение": params.get("k_conv_cl_liq", 0.95), "Ед. изм.": "д.ед.", "Формула / Примечание": "Доля перехода Cl -> HCl"},
+            {"Категория": "Конверсия в газ", "Параметр": "Конверсия S -> SO2 (Жидкие)", "Значение": params.get("k_conv_s_liq", 0.85), "Ед. изм.": "д.ед.", "Формула / Примечание": "Доля перехода S -> SO2"},
+            {"Категория": "Конверсия в газ", "Параметр": "Конверсия Cl -> HCl (ТБО)", "Значение": params.get("k_conv_cl_tbo", 0.85), "Ед. изм.": "д.ед.", "Формула / Примечание": "Доля перехода Cl -> HCl"},
+            {"Категория": "Конверсия в газ", "Параметр": "Конверсия S -> SO2 (ТБО)", "Значение": params.get("k_conv_s_tbo", 0.80), "Ед. изм.": "д.ед.", "Формула / Примечание": "Доля перехода S -> SO2"}
         ])
         df_inputs.to_excel(writer, sheet_name="Исходные данные и формулы", index=False)
         
@@ -1073,8 +1119,26 @@ def generate_excel_report(
         if "breakdown_table" in tbo_feed and tbo_feed["breakdown_table"]:
             df_morph = pd.DataFrame(tbo_feed["breakdown_table"])
             df_morph.to_excel(writer, sheet_name="Морфология ТБО", index=False)
+
+        # Лист 6: Compliance (ИТС 9-2020)
+        fl_liq = params.get("flue_gas_flow_liq", 2500.0)
+        fl_tbo = params.get("flue_gas_flow_tbo", 800.0)
+        c_hcl_in_l = (liquid_feed['mass_hcl'] * 1e6) / fl_liq if fl_liq > 0 else 0.0
+        c_so2_in_l = (liquid_feed['mass_so2'] * 1e6) / fl_liq if fl_liq > 0 else 0.0
+        c_hcl_in_t = (tbo_feed['mass_hcl'] * 1e6) / fl_tbo if fl_tbo > 0 else 0.0
+        c_so2_in_t = (tbo_feed['mass_so2'] * 1e6) / fl_tbo if fl_tbo > 0 else 0.0
+        
+        eta_s = params.get('eta_scrubber', 0.95)
+        df_comp = pd.DataFrame([
+            {"Установка": "Уст.1 (Жидкие отходы)", "Вещество": "HCl", "Расход газов, нм3/ч": fl_liq, "Входная конц., мг/нм3": round(c_hcl_in_l, 1), "ПДК ИТС 9-2020, мг/нм3": 10.0, "Выходная конц., мг/нм3": round(c_hcl_in_l*(1-eta_s), 2), "Требуемая η": f"{max(0.0, 1-10/c_hcl_in_l):.1%}" if c_hcl_in_l > 10 else "0.0%", "Статус": "НОРМА" if c_hcl_in_l*(1-eta_s) <= 10 else "ПРЕВЫШЕНИЕ"},
+            {"Установка": "Уст.1 (Жидкие отходы)", "Вещество": "SO2", "Расход газов, нм3/ч": fl_liq, "Входная конц., мг/нм3": round(c_so2_in_l, 1), "ПДК ИТС 9-2020, мг/нм3": 50.0, "Выходная конц., мг/нм3": round(c_so2_in_l*(1-eta_s), 2), "Требуемая η": f"{max(0.0, 1-50/c_so2_in_l):.1%}" if c_so2_in_l > 50 else "0.0%", "Статус": "НОРМА" if c_so2_in_l*(1-eta_s) <= 50 else "ПРЕВЫШЕНИЕ"},
+            {"Установка": "Уст.2 (ТБО 170 кг/ч)", "Вещество": "HCl", "Расход газов, нм3/ч": fl_tbo, "Входная конц., мг/нм3": round(c_hcl_in_t, 1), "ПДК ИТС 9-2020, мг/нм3": 10.0, "Выходная конц., мг/нм3": round(c_hcl_in_t*(1-eta_s), 2), "Требуемая η": f"{max(0.0, 1-10/c_hcl_in_t):.1%}" if c_hcl_in_t > 10 else "0.0%", "Статус": "НОРМА" if c_hcl_in_t*(1-eta_s) <= 10 else "ПРЕВЫШЕНИЕ"},
+            {"Установка": "Уст.2 (ТБО 170 кг/ч)", "Вещество": "SO2", "Расход газов, нм3/ч": fl_tbo, "Входная конц., мг/нм3": round(c_so2_in_t, 1), "ПДК ИТС 9-2020, мг/нм3": 50.0, "Выходная конц., мг/нм3": round(c_so2_in_t*(1-eta_s), 2), "Требуемая η": f"{max(0.0, 1-50/c_so2_in_t):.1%}" if c_so2_in_t > 50 else "0.0%", "Статус": "НОРМА" if c_so2_in_t*(1-eta_s) <= 50 else "ПРЕВЫШЕНИЕ"},
+        ])
+        df_comp.to_excel(writer, sheet_name="Compliance (ИТС 9-2020)", index=False)
             
     if output_path is not None:
         return output_path
     else:
         return buf.getvalue()
+
