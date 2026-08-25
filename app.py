@@ -540,34 +540,110 @@ with tab3:
 
     
     # === БЛОК COMPLIANCE ПО ИТС 9-2020 ДЛЯ ОБЕИХ УСТАНОВОК ===
-    st.subheader("🛡️ Проверка compliance по ИТС 9-2020 (Приложение В)")
+    st.subheader("🛡️ Экологические показатели выбросов и Compliance (ИТС 9-2020, Приложение В)")
 
     col1, col2, col3 = st.columns(3)
 
     with col1:
         st.markdown(f"**💧 Установка №1: Жидкие ({flue_gas_flow_liq:.0f} нм³/ч)**")
-        st.metric("HCl вх.", f"{final_results['conc_hcl_in_liq']:.1f} мг/нм³", delta=f"η_req: {final_results['eta_req_hcl_liq']:.1%}")
-        st.metric("SO₂ вх.", f"{final_results['conc_so2_in_liq']:.1f} мг/нм³", delta=f"η_req: {final_results['eta_req_so2_liq']:.1%}")
+        st.metric(
+            label="HCl: Вход → Выход",
+            value=f"{liq_calc_res['conc_hcl_out']:.2f} мг/нм³",
+            delta=f"Вход: {liq_calc_res['conc_hcl_in']:.1f} мг/нм³ (ПДК ≤ 10)",
+            delta_color="normal" if liq_calc_res['conc_hcl_out'] <= 10.0 else "inverse"
+        )
+        st.metric(
+            label="SO₂: Вход → Выход",
+            value=f"{liq_calc_res['conc_so2_out']:.2f} мг/нм³",
+            delta=f"Вход: {liq_calc_res['conc_so2_in']:.1f} мг/нм³ (ПДК ≤ 50)",
+            delta_color="normal" if liq_calc_res['conc_so2_out'] <= 50.0 else "inverse"
+        )
 
     with col2:
         st.markdown(f"**🗑️ Установка №2: ТБО ({flue_gas_flow_tbo:.0f} нм³/ч)**")
-        st.metric("HCl вх.", f"{final_results['conc_hcl_in_tbo']:.1f} мг/нм³", delta=f"η_req: {final_results['eta_req_hcl_tbo']:.1%}")
-        st.metric("SO₂ вх.", f"{final_results['conc_so2_in_tbo']:.1f} мг/нм³", delta=f"η_req: {final_results['eta_req_so2_tbo']:.1%}")
+        st.metric(
+            label="HCl: Вход → Выход",
+            value=f"{tbo_calc_res['conc_hcl_out']:.2f} мг/нм³",
+            delta=f"Вход: {tbo_calc_res['conc_hcl_in']:.1f} мг/нм³ (ПДК ≤ 10)",
+            delta_color="normal" if tbo_calc_res['conc_hcl_out'] <= 10.0 else "inverse"
+        )
+        st.metric(
+            label="SO₂: Вход → Выход",
+            value=f"{tbo_calc_res['conc_so2_out']:.2f} мг/нм³",
+            delta=f"Вход: {tbo_calc_res['conc_so2_in']:.1f} мг/нм³ (ПДК ≤ 50)",
+            delta_color="normal" if tbo_calc_res['conc_so2_out'] <= 50.0 else "inverse"
+        )
 
     with col3:
-        st.markdown("**Статус соответствия ПДК**")
+        st.markdown("**Экологический статус комплекса**")
         st.markdown(f"### {final_results['compliance_status']}")
         if final_results['compliance_msg']:
             st.warning(final_results['compliance_msg'])
         else:
-            st.success(f"Паспортная эффективность скрубберов ({eta_scrubber:.1%}) достаточна для нормативов ИТС 9-2020 (HCl ≤ 10, SO₂ ≤ 50 мг/нм³).")
+            st.success(f"Паспортная эффективность скрубберов ({eta_scrubber:.1%}) обеспечивает соблюдение нормативов ПДК (HCl ≤ 10, SO₂ ≤ 50 мг/нм³).")
+
+    # Таблица показателей на выходе (Compliance ИТС 9-2020)
+    st.markdown("##### 📋 Сводная таблица показателей на выходе (ИТС 9-2020):")
+    df_comp_table = pd.DataFrame([
+        {
+            "Установка": "💧 Уст. №1 (Жидкие отходы, 1,5 м³/ч)",
+            "Загрязняющее вещество": "Хлороводород (HCl)",
+            "Расход газов, нм³/ч": f"{flue_gas_flow_liq:.0f}",
+            "Входная конц., мг/нм³": f"{liq_calc_res['conc_hcl_in']:.1f}",
+            "ПДК ИТС 9-2020, мг/нм³": "≤ 10,0",
+            "Выходная конц., мг/нм³": f"{liq_calc_res['conc_hcl_out']:.2f}",
+            "Требуемая η_req": f"{liq_calc_res['eta_req_hcl']:.1%}",
+            "Выброс в трубу, кг/ч": f"{active_liq_feed['mass_hcl']*(1.0 - eta_scrubber):.4f}",
+            "Статус": "✅ НОРМА" if liq_calc_res['conc_hcl_out'] <= 10.0 else "⚠️ ПРЕВЫШЕНИЕ"
+        },
+        {
+            "Установка": "💧 Уст. №1 (Жидкие отходы, 1,5 м³/ч)",
+            "Загрязняющее вещество": "Диоксид серы (SO₂)",
+            "Расход газов, нм³/ч": f"{flue_gas_flow_liq:.0f}",
+            "Входная конц., мг/нм³": f"{liq_calc_res['conc_so2_in']:.1f}",
+            "ПДК ИТС 9-2020, мг/нм³": "≤ 50,0",
+            "Выходная конц., мг/нм³": f"{liq_calc_res['conc_so2_out']:.2f}",
+            "Требуемая η_req": f"{liq_calc_res['eta_req_so2']:.1%}",
+            "Выброс в трубу, кг/ч": f"{active_liq_feed['mass_so2']*(1.0 - eta_scrubber):.4f}",
+            "Статус": "✅ НОРМА" if liq_calc_res['conc_so2_out'] <= 50.0 else "⚠️ ПРЕВЫШЕНИЕ"
+        },
+        {
+            "Установка": "🗑️ Уст. №2 (ТБО, 170 кг/ч)",
+            "Загрязняющее вещество": "Хлороводород (HCl)",
+            "Расход газов, нм³/ч": f"{flue_gas_flow_tbo:.0f}",
+            "Входная конц., мг/нм³": f"{tbo_calc_res['conc_hcl_in']:.1f}",
+            "ПДК ИТС 9-2020, мг/нм³": "≤ 10,0",
+            "Выходная конц., мг/нм³": f"{tbo_calc_res['conc_hcl_out']:.2f}",
+            "Требуемая η_req": f"{tbo_calc_res['eta_req_hcl']:.1%}",
+            "Выброс в трубу, кг/ч": f"{tbo_feed_res['mass_hcl']*(1.0 - eta_scrubber):.4f}",
+            "Статус": "✅ НОРМА" if tbo_calc_res['conc_hcl_out'] <= 10.0 else "⚠️ ПРЕВЫШЕНИЕ"
+        },
+        {
+            "Установка": "🗑️ Уст. №2 (ТБО, 170 кг/ч)",
+            "Загрязняющее вещество": "Диоксид серы (SO₂)",
+            "Расход газов, нм³/ч": f"{flue_gas_flow_tbo:.0f}",
+            "Входная конц., мг/нм³": f"{tbo_calc_res['conc_so2_in']:.1f}",
+            "ПДК ИТС 9-2020, мг/нм³": "≤ 50,0",
+            "Выходная конц., мг/нм³": f"{tbo_calc_res['conc_so2_out']:.2f}",
+            "Требуемая η_req": f"{tbo_calc_res['eta_req_so2']:.1%}",
+            "Выброс в трубу, кг/ч": f"{tbo_feed_res['mass_so2']*(1.0 - eta_scrubber):.4f}",
+            "Статус": "✅ НОРМА" if tbo_calc_res['conc_so2_out'] <= 50.0 else "⚠️ ПРЕВЫШЕНИЕ"
+        }
+    ])
+    st.dataframe(df_comp_table, use_container_width=True, hide_index=True)
 
     st.markdown("---")
     st.markdown(f"**График работы:** {hours_per_day:.0f} ч/сутки • {operating_days_year:.0f} рабочих дней в году • Общий фонд: **{annual_hours:.0f} ч/год**")
 
-
-    
     # Сводная таблица
+    st.markdown("##### 📊 Сводная ведомость потребности в чистом 100% NaOH и показателей выбросов:")
+    mass_hcl_out_l = active_liq_feed['mass_hcl'] * (1.0 - eta_scrubber)
+    mass_so2_out_l = active_liq_feed['mass_so2'] * (1.0 - eta_scrubber)
+    mass_hcl_out_t = tbo_feed_res['mass_hcl'] * (1.0 - eta_scrubber)
+    mass_so2_out_t = tbo_feed_res['mass_so2'] * (1.0 - eta_scrubber)
+    conc_hcl_out_comb = ((mass_hcl_out_l + mass_hcl_out_t) * 1e6) / flue_gas_flow if flue_gas_flow > 0 else 0.0
+    conc_so2_out_comb = ((mass_so2_out_l + mass_so2_out_t) * 1e6) / flue_gas_flow if flue_gas_flow > 0 else 0.0
+
     df_compare_installations = pd.DataFrame([
         {
             "Показатель": "Часовой расход 100% чистого NaOH",
@@ -596,9 +672,45 @@ with tab3:
             "1) Жидкие отходы (1,5 м³/ч)": f"{liq_calc_res['spec_naoh_pure_g_per_kg']:.2f}",
             "2) ТБО (170 кг/ч)": f"{tbo_calc_res['spec_naoh_pure_g_per_kg']:.1f}",
             "СУММАРНО ПО КОМПЛЕКСУ": f"{comb_calc_res['spec_naoh_pure_g_per_kg']:.1f}"
+        },
+        {
+            "Показатель": "Расход дымовых газов (V_г)",
+            "Ед. изм.": "нм³/ч",
+            "1) Жидкие отходы (1,5 м³/ч)": f"{flue_gas_flow_liq:.0f}",
+            "2) ТБО (170 кг/ч)": f"{flue_gas_flow_tbo:.0f}",
+            "СУММАРНО ПО КОМПЛЕКСУ": f"{flue_gas_flow:.0f}"
+        },
+        {
+            "Показатель": "Выходная концентрация HCl (ПДК ≤ 10 мг/нм³)",
+            "Ед. изм.": "мг/нм³",
+            "1) Жидкие отходы (1,5 м³/ч)": f"{liq_calc_res['conc_hcl_out']:.2f}",
+            "2) ТБО (170 кг/ч)": f"{tbo_calc_res['conc_hcl_out']:.2f}",
+            "СУММАРНО ПО КОМПЛЕКСУ": f"{conc_hcl_out_comb:.2f}"
+        },
+        {
+            "Показатель": "Выходная концентрация SO₂ (ПДК ≤ 50 мг/нм³)",
+            "Ед. изм.": "мг/нм³",
+            "1) Жидкие отходы (1,5 м³/ч)": f"{liq_calc_res['conc_so2_out']:.2f}",
+            "2) ТБО (170 кг/ч)": f"{tbo_calc_res['conc_so2_out']:.2f}",
+            "СУММАРНО ПО КОМПЛЕКСУ": f"{conc_so2_out_comb:.2f}"
+        },
+        {
+            "Показатель": "Остаточный выброс HCl в атмосферу",
+            "Ед. изм.": "кг/ч",
+            "1) Жидкие отходы (1,5 м³/ч)": f"{mass_hcl_out_l:.4f}",
+            "2) ТБО (170 кг/ч)": f"{mass_hcl_out_t:.4f}",
+            "СУММАРНО ПО КОМПЛЕКСУ": f"{(mass_hcl_out_l + mass_hcl_out_t):.4f}"
+        },
+        {
+            "Показатель": "Остаточный выброс SO₂ в атмосферу",
+            "Ед. изм.": "кг/ч",
+            "1) Жидкие отходы (1,5 м³/ч)": f"{mass_so2_out_l:.4f}",
+            "2) ТБО (170 кг/ч)": f"{mass_so2_out_t:.4f}",
+            "СУММАРНО ПО КОМПЛЕКСУ": f"{(mass_so2_out_l + mass_so2_out_t):.4f}"
         }
     ])
     st.dataframe(df_compare_installations, use_container_width=True, hide_index=True)
+
     
     st.markdown("---")
     
