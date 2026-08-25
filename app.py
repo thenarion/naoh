@@ -173,7 +173,8 @@ tab1, tab2, tab3, tab4 = st.tabs([
 # ------------------------------------------------------------------------------
 with tab1:
     st.subheader("💧 Установка №1: Утилизация жидких отходов (КТОЖС)")
-    st.markdown("Исходные концентрации активных кислых компонентов ($\text{Cl}^-$ и $\text{SO}_4^{2-}$) по **СП 320.1325800.2017 (Таблица Г.1)**:")
+    st.markdown("Исходные концентрации активных кислых компонентов (**Cl⁻** и **SO₄²⁻**) по **СП 320.1325800.2017 (Таблица Г.1)**:")
+
     
     col_q, col_active_set = st.columns([1, 2])
     with col_q:
@@ -899,25 +900,28 @@ with tab4:
               $$M_{\text{SO}_2} = M_{\text{S}} \cdot k_{\text{конв, S}} \cdot \frac{\mu_{\text{SO}_2}}{\mu_{\text{S}}} = M_{\text{S}} \cdot 0{,}90 \cdot \frac{64{,}063}{32{,}065} \approx M_{\text{S}} \cdot 1{,}7981\quad (\text{кг/ч})$$
               *(для жидких отходов $M_{\text{S}} = Q_{\text{liq}} \cdot C_{\text{SO}_4} \cdot \frac{32{,}065}{96{,}061} \cdot 10^{-3}$)*
 
-            #### 2. Стехиометрические реакции и теоретический расход $100\%$ $\text{NaOH}$:
-            * **Нейтрализация $\text{HCl}$ (улавливаемая масса $M_{\text{HCl}} \cdot \eta_{\text{скр}}$)**:
+            #### 2. Стехиометрические реакции и целевой расход $100\%$ $\text{NaOH}$ под ПДК ИТС 9-2020:
+            * **Нейтрализация $\text{HCl}$ (масса сверх норматива $\le 10{,}0\text{ мг/нм}^3$)**:
               $$\text{HCl} + \text{NaOH} \rightarrow \text{NaCl} + \text{H}_2\text{O}$$
-              $$M_{\text{NaOH, HCl}}^{\text{теор}} = M_{\text{HCl}} \cdot \eta_{\text{скр}} \cdot \frac{\mu_{\text{NaOH}}}{\mu_{\text{HCl}}} \approx M_{\text{HCl}} \cdot \eta_{\text{скр}} \cdot 1{,}0970\quad (\text{кг/ч})$$
-            * **Нейтрализация $\text{SO}_2$ (улавливаемая масса $M_{\text{SO}_2} \cdot \eta_{\text{скр}}$)**:
+              $$\Delta M_{\text{HCl}} = \frac{\max(0,\, C_{\text{вх, HCl}} - 10{,}0) \cdot V_{\text{г}}}{10^6}\quad (\text{кг/ч})$$
+              $$M_{\text{NaOH, HCl}}^{\text{теор}} = \Delta M_{\text{HCl}} \cdot \frac{\mu_{\text{NaOH}}}{\mu_{\text{HCl}}} \approx \Delta M_{\text{HCl}} \cdot 1{,}0970\quad (\text{кг/ч})$$
+            * **Нейтрализация $\text{SO}_2$ (масса сверх норматива $\le 50{,}0\text{ мг/нм}^3$)**:
               $$\text{SO}_2 + 2\text{NaOH} \rightarrow \text{Na}_2\text{SO}_3 + \text{H}_2\text{O}$$
-              $$M_{\text{NaOH, SO}_2}^{\text{теор}} = M_{\text{SO}_2} \cdot \eta_{\text{скр}} \cdot \frac{2 \cdot \mu_{\text{NaOH}}}{\mu_{\text{SO}_2}} \approx M_{\text{SO}_2} \cdot \eta_{\text{скр}} \cdot 1{,}2487\quad (\text{кг/ч})$$
+              $$\Delta M_{\text{SO}_2}} = \frac{\max(0,\, C_{\text{вх, SO}_2} - 50{,}0) \cdot V_{\text{г}}}{10^6}\quad (\text{кг/ч})$$
+              $$M_{\text{NaOH, SO}_2}^{\text{теор}} = \Delta M_{\text{SO}_2} \cdot \frac{2 \cdot \mu_{\text{NaOH}}}{\mu_{\text{SO}_2}} \approx \Delta M_{\text{SO}_2} \cdot 1{,}2487\quad (\text{кг/ч})$$
             * **Суммарный теоретический расход**:
               $$M_{\text{NaOH}}^{\text{теор}} = M_{\text{NaOH, HCl}}^{\text{теор}} + M_{\text{NaOH, SO}_2}^{\text{теор}}\quad (\text{кг/ч})$$
 
             #### 3. Фактический часовой, суточный и годовой расход чистого $100\%$ $\text{NaOH}$:
             * **Физическое обоснование**:
-              *Эффективность скруббера ($\eta_{\text{скр}}$) определяет долю кислых газов, которая фактически поглощается орошающим раствором. Расход $\text{NaOH}$ рассчитывается строго исходя из массы уловленных загрязнителей. Коэффициент избытка ($k_{\text{изб}} = 1{,}15$) обеспечивает технологический запас и стабильное поддержание $\text{pH}$ на уровне 7,5–8,5.*
-            * **Часовой расход с учетом КПД скруббера $\eta_{\text{скр}}$ и избытка $k_{\text{изб}}$**:
-              $$M_{\text{NaOH, факт}}^{\text{час}} = M_{\text{NaOH}}^{\text{теор}} \cdot k_{\text{изб}} = \left(M_{\text{HCl}} \cdot 1{,}0970 + M_{\text{SO}_2} \cdot 1{,}2487\right) \cdot \eta_{\text{скр}} \cdot k_{\text{изб}}\quad (\text{кг/ч})$$
+              *Расход $\text{NaOH}$ подбирается строго для достижения нормативов ИТС 9-2020 ($\text{HCl} \le 10{,}0\text{ мг/нм}^3$, $\text{SO}_2 \le 50{,}0\text{ мг/нм}^3$). С учетом полезного использования реагента в скруббере ($\eta_{\text{скр}}$) и коэффициента технологического запаса ($k_{\text{изб}} = 1{,}15$ для стабильного поддержания $\text{pH}$):*
+            * **Часовой расход**:
+              $$M_{\text{NaOH, факт}}^{\text{час}} = \frac{M_{\text{NaOH}}^{\text{теор}} \cdot k_{\text{изб}}}{\eta_{\text{скр}}}\quad (\text{кг/ч})$$
             * **Суточный расход по рабочей смене ($T_{\text{сут}}$)**:
               $$M_{\text{NaOH, факт}}^{\text{сут}} = M_{\text{NaOH, факт}}^{\text{час}} \cdot T_{\text{сут}}\quad (\text{кг/сут})$$
             * **Годовой расход с учетом рабочих дней ($D_{\text{год}}$)**:
               $$M_{\text{NaOH, факт}}^{\text{год}} = \frac{M_{\text{NaOH, факт}}^{\text{час}} \cdot (T_{\text{сут}} \cdot D_{\text{год}})}{1000} = \frac{M_{\text{NaOH, факт}}^{\text{час}} \cdot T_{\text{год}}}{1000}\quad (\text{т/год})$$
+
 
 
             #### 4. Удельный расход чистого $100\%$ реагента на 1 кг отходов:
