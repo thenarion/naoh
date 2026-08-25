@@ -147,6 +147,11 @@ with st.sidebar.expander("🔥 Конверсия при 1100 °C", expanded=Tru
     k_conv_cl_tbo = st.slider("Доля Cl → HCl (ТБО)", 0.0, 1.0, 0.85, 0.01, help="Степень перехода Cl в HCl для ТБО (с учетом удержания NaCl/KCl в золе)")
     k_conv_s_tbo = st.slider("Доля S → SO₂ (ТБО)", 0.0, 1.0, 0.80, 0.01, help="Степень перехода S в SO₂ для ТБО (с учетом связывания CaSO₄ в золе)")
 
+with st.sidebar.expander("⚙️ Калибровочные коэффициенты", expanded=False):
+    k_l = st.number_input("Коэффициент Kl (Жидкие)", min_value=0.01, max_value=10.0, value=1.0, step=0.05, format="%.2f", help="Калибровочный коэффициент для жидких отходов (по умолчанию 1.00)")
+    k_t = st.number_input("Коэффициент Kt (ТБО)", min_value=0.01, max_value=10.0, value=1.0, step=0.05, format="%.2f", help="Калибровочный коэффициент для ТБО (по умолчанию 1.00)")
+
+
 
 # Предварительная оценка общего потока отходов для пропорционального распределения газов
 q_liq_init = st.session_state.get('liq_q_flow', 1.5)
@@ -241,9 +246,11 @@ with tab1:
         flue_gas_flow=flue_gas_flow_liq,
         k_excess=k_excess,
         eta_scrubber=eta_scrubber,
+        k_l=k_l,
         hours_per_day=hours_per_day,
         operating_days_year=operating_days_year
     )
+
     
     st.markdown("---")
     st.markdown(f"#### 📊 Результаты расчета чистого 100% NaOH ({active_liq_title}, V_г = {flue_gas_flow_liq:.0f} нм³/ч):")
@@ -428,9 +435,11 @@ with tab2:
         flue_gas_flow=flue_gas_flow_tbo,
         k_excess=k_excess,
         eta_scrubber=eta_scrubber,
+        k_t=k_t,
         hours_per_day=hours_per_day,
         operating_days_year=operating_days_year
     )
+
     
     st.markdown("---")
     st.markdown(f"#### 📊 Результаты расчета чистого 100% NaOH (ТБО 170 кг/ч, V_г = {flue_gas_flow_tbo:.0f} нм³/ч):")
@@ -544,11 +553,14 @@ with tab3:
         flue_gas_flow_tbo=flue_gas_flow_tbo,
         eta_scrubber=eta_scrubber,
         k_excess=k_excess,
+        k_l=k_l,
+        k_t=k_t,
         eta_co2_abs=0.0,
         c_naoh_sol=100.0,
         hours_per_day=hours_per_day,
         operating_days_year=operating_days_year
     )
+
     
     st.session_state['liq_calc'] = liq_calc_res
     st.session_state['tbo_calc'] = tbo_calc_res

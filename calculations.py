@@ -292,6 +292,7 @@ def calculate_single_stream_consumption(
     k_conv_s: float = 1.0,
     flue_gas_flow: float = 30000.0,
     k_excess: float = 1.15,
+    k_corr: float = 1.0,
     limit_hcl: float = 10.0,
     limit_so2: float = 50.0,
     eta_scrubber: float = 0.95,
@@ -327,10 +328,11 @@ def calculate_single_stream_consumption(
     stoich_hcl = M_NaOH / M_HCl         # ~1.09697 кг NaOH / кг HCl
     stoich_so2 = (2 * M_NaOH) / M_SO2   # ~1.24867 кг NaOH / кг SO2
     
-    # 5. Теоретический расход 100% NaOH на нейтрализацию до нормативов ПДК (кг/ч)
-    naoh_hcl_theor = mass_hcl_neut * stoich_hcl
-    naoh_so2_theor = mass_so2_neut * stoich_so2
+    # 5. Теоретический расход 100% NaOH на нейтрализацию до нормативов ПДК с учетом калибровочного коэффициента (кг/ч)
+    naoh_hcl_theor = mass_hcl_neut * stoich_hcl * k_corr
+    naoh_so2_theor = mass_so2_neut * stoich_so2 * k_corr
     naoh_total_theor = naoh_hcl_theor + naoh_so2_theor
+
     
     # 6. Фактический часовой расход 100% NaOH с учетом эффективности скруббера и коэффициента избытка (кг/ч)
     # Чем выше паспортная эффективность скруббера (η_скр), тем выше полезное использование NaOH и МЕНЬШЕ расход реагента
@@ -416,6 +418,7 @@ def calculate_liquid_installation_naoh(
     flue_gas_flow: float = 30000.0,
     k_excess: float = 1.15,
     eta_scrubber: float = 0.95,
+    k_l: float = 1.0,
     hours_per_day: float = 24.0,
     operating_days_year: float = 365.0
 ) -> Dict[str, Any]:
@@ -434,6 +437,7 @@ def calculate_liquid_installation_naoh(
         k_conv_s=liquid_results.get("k_conv_s", 0.85),
         flue_gas_flow=flue_gas_flow,
         k_excess=k_excess,
+        k_corr=k_l,
         eta_scrubber=eta_scrubber,
         hours_per_day=hours_per_day,
         operating_days_year=operating_days_year,
@@ -449,6 +453,7 @@ def calculate_tbo_installation_naoh(
     flue_gas_flow: float = 15000.0,
     k_excess: float = 1.15,
     eta_scrubber: float = 0.95,
+    k_t: float = 1.0,
     hours_per_day: float = 24.0,
     operating_days_year: float = 365.0
 ) -> Dict[str, Any]:
@@ -467,6 +472,7 @@ def calculate_tbo_installation_naoh(
         k_conv_s=tbo_results.get("k_conv_s", 0.80),
         flue_gas_flow=flue_gas_flow,
         k_excess=k_excess,
+        k_corr=k_t,
         eta_scrubber=eta_scrubber,
         hours_per_day=hours_per_day,
         operating_days_year=operating_days_year,
@@ -525,6 +531,8 @@ def calculate_naoh_and_compliance(
     flue_gas_flow: Optional[float] = None,
     eta_scrubber: float = 0.95,
     k_excess: float = 1.15,
+    k_l: float = 1.0,
+    k_t: float = 1.0,
     eta_co2_abs: float = 0.0,
     c_naoh_sol: float = 100.0,
     hours_per_day: float = 24.0,
@@ -593,14 +601,15 @@ def calculate_naoh_and_compliance(
     stoich_hcl = M_NaOH / M_HCl         # ~1.09697 кг NaOH / кг HCl
     stoich_so2 = (2 * M_NaOH) / M_SO2   # ~1.24867 кг NaOH / кг SO2
     
-    naoh_hcl_theor = mass_hcl_neut_total * stoich_hcl
-    naoh_so2_theor = mass_so2_neut_total * stoich_so2
+    naoh_hcl_theor = (mass_hcl_neut_liq * stoich_hcl * k_l) + (mass_hcl_neut_tbo * stoich_hcl * k_t)
+    naoh_so2_theor = (mass_so2_neut_liq * stoich_so2 * k_l) + (mass_so2_neut_tbo * stoich_so2 * k_t)
     naoh_total_theor = naoh_hcl_theor + naoh_so2_theor
     
     k_eff = (k_excess / eta_scrubber) if eta_scrubber > 0 else k_excess
     naoh_hcl_fact = naoh_hcl_theor * k_eff
     naoh_so2_fact = naoh_so2_theor * k_eff
     naoh_total_fact = naoh_hcl_fact + naoh_so2_fact
+
 
 
 
