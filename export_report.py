@@ -89,34 +89,45 @@ class DetailedEngineeringPDF(FPDF):
         super().__init__(orientation='P', unit='mm', format='A4')
         self.font_regular = "CyrillicFont"
         
-        # Кроссплатформенный поиск TTF шрифтов с поддержкой кириллицы (Windows, Linux, Streamlit Cloud)
-        font_candidates = [
-            # Windows
-            ("C:/Windows/Fonts/arial.ttf", "C:/Windows/Fonts/arialbd.ttf", "C:/Windows/Fonts/ariali.ttf", "C:/Windows/Fonts/arialbi.ttf"),
-            ("C:/Windows/Fonts/calibri.ttf", "C:/Windows/Fonts/calibrib.ttf", "C:/Windows/Fonts/calibrii.ttf", "C:/Windows/Fonts/calibriz.ttf"),
-            # Linux / Debian / Ubuntu / Streamlit Cloud
-            ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-BoldOblique.ttf"),
-            ("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-BoldItalic.ttf"),
-            ("/usr/share/fonts/truetype/freefont/FreeSans.ttf", "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf", "/usr/share/fonts/truetype/freefont/FreeSansOblique.ttf", "/usr/share/fonts/truetype/freefont/FreeSansBoldOblique.ttf"),
-        ]
-        
         font_found = False
-        for reg, bold, italic, bold_italic in font_candidates:
-            if os.path.exists(reg):
+        
+        # 1. Приоритетный кроссплатформенный поиск шрифта DejaVu Sans из matplotlib (всегда есть в окружении Streamlit Cloud)
+        try:
+            import matplotlib.font_manager as fm
+            reg = fm.findfont('DejaVu Sans')
+            bold = fm.findfont('DejaVu Sans:weight=bold')
+            italic = fm.findfont('DejaVu Sans:style=italic')
+            bold_italic = fm.findfont('DejaVu Sans:weight=bold:style=italic')
+            if reg and os.path.exists(reg):
                 self.add_font("CyrillicFont", "", reg)
-                self.add_font("CyrillicFont", "B", bold if os.path.exists(bold) else reg)
-                self.add_font("CyrillicFont", "I", italic if os.path.exists(italic) else reg)
-                self.add_font("CyrillicFont", "BI", bold_italic if os.path.exists(bold_italic) else reg)
+                self.add_font("CyrillicFont", "B", bold if (bold and os.path.exists(bold)) else reg)
+                self.add_font("CyrillicFont", "I", italic if (italic and os.path.exists(italic)) else reg)
+                self.add_font("CyrillicFont", "BI", bold_italic if (bold_italic and os.path.exists(bold_italic)) else reg)
                 font_found = True
-                break
-                
+        except Exception:
+            pass
+
+        # 2. Системные пути к шрифтам (Windows / Linux)
         if not font_found:
-            # Если системные TTF шрифты отсутствуют, используем встроенную поддержку
-            try:
-                self.set_fallback_fonts(["Helvetica"])
-            except Exception:
-                pass
-            self.font_regular = "Helvetica"
+            font_candidates = [
+                # Windows
+                ("C:/Windows/Fonts/arial.ttf", "C:/Windows/Fonts/arialbd.ttf", "C:/Windows/Fonts/ariali.ttf", "C:/Windows/Fonts/arialbi.ttf"),
+                ("C:/Windows/Fonts/calibri.ttf", "C:/Windows/Fonts/calibrib.ttf", "C:/Windows/Fonts/calibrii.ttf", "C:/Windows/Fonts/calibriz.ttf"),
+                # Linux / Debian / Ubuntu / Streamlit Cloud
+                ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-BoldOblique.ttf"),
+                ("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-BoldItalic.ttf"),
+                ("/usr/share/fonts/truetype/freefont/FreeSans.ttf", "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf", "/usr/share/fonts/truetype/freefont/FreeSansOblique.ttf", "/usr/share/fonts/truetype/freefont/FreeSansBoldOblique.ttf"),
+            ]
+            
+            for reg, bold, italic, bold_italic in font_candidates:
+                if os.path.exists(reg):
+                    self.add_font("CyrillicFont", "", reg)
+                    self.add_font("CyrillicFont", "B", bold if os.path.exists(bold) else reg)
+                    self.add_font("CyrillicFont", "I", italic if os.path.exists(italic) else reg)
+                    self.add_font("CyrillicFont", "BI", bold_italic if os.path.exists(bold_italic) else reg)
+                    font_found = True
+                    break
+
             
         self.set_margins(left=15, top=15, right=15)
         self.set_auto_page_break(auto=True, margin=15)
