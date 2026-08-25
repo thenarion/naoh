@@ -145,7 +145,7 @@ with st.sidebar.expander("🔥 Конверсия при 1100 °C", expanded=Tru
     k_conv_s_liq = st.slider("Доля S → SO₂ (жидкие отходы)", 0.0, 1.0, 0.85, 0.01, help="Степень перехода S в SO₂ для жидких отходов (с учетом связывания в золе)")
     k_conv_cl_tbo = st.slider("Доля Cl → HCl (ТБО)", 0.0, 1.0, 0.85, 0.01, help="Степень перехода Cl в HCl для ТБО (с учетом удержания NaCl/KCl в золе)")
     k_conv_s_tbo = st.slider("Доля S → SO₂ (ТБО)", 0.0, 1.0, 0.80, 0.01, help="Степень перехода S в SO₂ для ТБО (с учетом связывания CaSO₄ в золе)")
-    k_conv_c = st.slider("Доля C → CO₂", 0.0, 1.0, 0.98, 0.01, help="Степень полного окисления углерода в CO₂")
+
 
 # Предварительная оценка общего потока отходов для пропорционального распределения газов
 q_liq_init = st.session_state.get('liq_q_flow', 1.5)
@@ -283,38 +283,45 @@ with tab1:
         {
             "Компонент": "Хлороводород (HCl)",
             "Стехиометрия": "HCl + NaOH → NaCl + H₂O",
-            "Поступление Cl, кг/ч": f"{active_liq_feed['mass_cl']:.3f}",
-            "Масса HCl в газе, кг/ч": f"{active_liq_feed['mass_hcl']:.3f}",
+            "Поступление элемента, кг/ч": f"{active_liq_feed['mass_cl']:.3f} (Cl)",
+            "Конверсия в газ (k_конв)": f"{k_conv_cl_liq:.2f}",
+            "Масса в газе, кг/ч": f"{active_liq_feed['mass_hcl']:.3f}",
+            "Входная конц., мг/нм³": f"{liq_calc_res['conc_hcl_in']:.1f}",
+            "Требуемая η (≤10 мг/нм³)": f"{liq_calc_res['eta_req_hcl']:.1%}",
             "100% NaOH (теор), кг/ч": f"{liq_calc_res['naoh_hcl_theor']:.3f}",
             "100% NaOH (факт), кг/ч": f"{liq_calc_res['naoh_hcl_fact']:.3f}",
             "Суточный (100%), кг/сут": f"{liq_calc_res['naoh_hcl_fact']*hours_per_day:.1f}",
-            "ГОДОВОЙ (100%), т/год": f"{(liq_calc_res['naoh_hcl_fact']*annual_hours)/1000:.2f}",
-            "Удельный, г/кг": f"{(liq_calc_res['naoh_hcl_fact']/active_liq_feed['feed_mass_kg_h']*1000):.2f}"
+            "ГОДОВОЙ (100%), т/год": f"{(liq_calc_res['naoh_hcl_fact']*annual_hours)/1000:.2f}"
         },
         {
             "Компонент": "Диоксид серы (SO₂)",
             "Стехиометрия": "SO₂ + 2NaOH → Na₂SO₃ + H₂O",
-            "Поступление S, кг/ч": f"{active_liq_feed['mass_s']:.3f}",
-            "Масса SO₂ в газе, кг/ч": f"{active_liq_feed['mass_so2']:.3f}",
+            "Поступление элемента, кг/ч": f"{active_liq_feed['mass_s']:.3f} (S)",
+            "Конверсия в газ (k_конв)": f"{k_conv_s_liq:.2f}",
+            "Масса в газе, кг/ч": f"{active_liq_feed['mass_so2']:.3f}",
+            "Входная конц., мг/нм³": f"{liq_calc_res['conc_so2_in']:.1f}",
+            "Требуемая η (≤50 мг/нм³)": f"{liq_calc_res['eta_req_so2']:.1%}",
             "100% NaOH (теор), кг/ч": f"{liq_calc_res['naoh_so2_theor']:.3f}",
             "100% NaOH (факт), кг/ч": f"{liq_calc_res['naoh_so2_fact']:.3f}",
             "Суточный (100%), кг/сут": f"{liq_calc_res['naoh_so2_fact']*hours_per_day:.1f}",
-            "ГОДОВОЙ (100%), т/год": f"{(liq_calc_res['naoh_so2_fact']*annual_hours)/1000:.2f}",
-            "Удельный, г/кг": f"{(liq_calc_res['naoh_so2_fact']/active_liq_feed['feed_mass_kg_h']*1000):.2f}"
+            "ГОДОВОЙ (100%), т/год": f"{(liq_calc_res['naoh_so2_fact']*annual_hours)/1000:.2f}"
         },
         {
             "Компонент": "ИТОГО (Жидкие отходы)",
             "Стехиометрия": "Суммарный расход",
-            "Поступление Cl, кг/ч": "-",
-            "Масса HCl в газе, кг/ч": f"{(active_liq_feed['mass_hcl'] + active_liq_feed['mass_so2']):.3f}",
+            "Поступление элемента, кг/ч": f"{(active_liq_feed['mass_cl'] + active_liq_feed['mass_s']):.3f}",
+            "Конверсия в газ (k_конв)": "-",
+            "Масса в газе, кг/ч": f"{(active_liq_feed['mass_hcl'] + active_liq_feed['mass_so2']):.3f}",
+            "Входная конц., мг/нм³": "-",
+            "Требуемая η (≤10 мг/нм³)": "-",
             "100% NaOH (теор), кг/ч": f"{liq_calc_res['naoh_total_theor']:.3f}",
             "100% NaOH (факт), кг/ч": f"{liq_calc_res['naoh_total_fact']:.3f}",
             "Суточный (100%), кг/сут": f"{liq_calc_res['naoh_pure_day_kg']:.1f}",
-            "ГОДОВОЙ (100%), т/год": f"{liq_calc_res['naoh_pure_year_t']:.2f}",
-            "Удельный, г/кг": f"{liq_calc_res['spec_naoh_pure_g_per_kg']:.2f}"
+            "ГОДОВОЙ (100%), т/год": f"{liq_calc_res['naoh_pure_year_t']:.2f}"
         }
     ])
     st.dataframe(df_liq_table, use_container_width=True, hide_index=True)
+
 
 # ------------------------------------------------------------------------------
 # ВКЛАДКА 2: УСТАНОВКА УТИЛИЗАЦИИ ТБО
@@ -347,7 +354,7 @@ with tab2:
         with c_d2:
             d_s = st.number_input("S в ТБО, % масс.", value=0.30, step=0.05, key="d_s_tbo")
             
-        tbo_feed_res = calculate_tbo_pollutants(m_tbo, custom_elements={"cl": d_cl, "s": d_s}, k_conv_cl=k_conv_cl_tbo, k_conv_s=k_conv_s_tbo, k_conv_c=k_conv_c)
+        tbo_feed_res = calculate_tbo_pollutants(m_tbo, custom_elements={"cl": d_cl, "s": d_s}, k_conv_cl=k_conv_cl_tbo, k_conv_s=k_conv_s_tbo)
     else:
         if 'last_preset' not in st.session_state:
             st.session_state['last_preset'] = "Усредненный смешанный состав (рекомендуемый)"
@@ -391,7 +398,7 @@ with tab2:
         else:
             st.success(f"✅ Сумма долей ТБО: **{tot_m:.1f}%** (среднее Cl = {(sum(v*TBO_WASTE_GROUPS[k]['cl'] for k,v in user_morph.items())/100):.3f}%, S = {(sum(v*TBO_WASTE_GROUPS[k]['s'] for k,v in user_morph.items())/100):.3f}%)")
             
-        tbo_feed_res = calculate_tbo_pollutants(m_tbo, morphology_dict=user_morph, k_conv_cl=k_conv_cl_tbo, k_conv_s=k_conv_s_tbo, k_conv_c=k_conv_c)
+        tbo_feed_res = calculate_tbo_pollutants(m_tbo, morphology_dict=user_morph, k_conv_cl=k_conv_cl_tbo, k_conv_s=k_conv_s_tbo)
 
 
     # Отдельный расчет расхода чистого 100% NaOH для Установки ТБО на соблюдение нормативов ИТС 9-2020
@@ -443,37 +450,44 @@ with tab2:
             "Компонент": "Хлороводород (HCl)",
             "Стехиометрия": "HCl + NaOH → NaCl + H₂O",
             "Поступление элемента, кг/ч": f"{tbo_feed_res['mass_cl']:.4f} (Cl)",
+            "Конверсия в газ (k_конв)": f"{k_conv_cl_tbo:.2f}",
             "Масса в газе, кг/ч": f"{tbo_feed_res['mass_hcl']:.3f}",
+            "Входная конц., мг/нм³": f"{tbo_calc_res['conc_hcl_in']:.1f}",
+            "Требуемая η (≤10 мг/нм³)": f"{tbo_calc_res['eta_req_hcl']:.1%}",
             "100% NaOH (теор), кг/ч": f"{tbo_calc_res['naoh_hcl_theor']:.3f}",
             "100% NaOH (факт), кг/ч": f"{tbo_calc_res['naoh_hcl_fact']:.3f}",
             "Суточный (100%), кг/сут": f"{tbo_calc_res['naoh_hcl_fact']*hours_per_day:.1f}",
-            "ГОДОВОЙ (100%), т/год": f"{(tbo_calc_res['naoh_hcl_fact']*annual_hours)/1000:.2f}",
-            "Удельный, г/кг": f"{(tbo_calc_res['naoh_hcl_fact']/m_tbo*1000):.2f}"
+            "ГОДОВОЙ (100%), т/год": f"{(tbo_calc_res['naoh_hcl_fact']*annual_hours)/1000:.2f}"
         },
         {
             "Компонент": "Диоксид серы (SO₂)",
             "Стехиометрия": "SO₂ + 2NaOH → Na₂SO₃ + H₂O",
             "Поступление элемента, кг/ч": f"{tbo_feed_res['mass_s']:.4f} (S)",
+            "Конверсия в газ (k_конв)": f"{k_conv_s_tbo:.2f}",
             "Масса в газе, кг/ч": f"{tbo_feed_res['mass_so2']:.3f}",
+            "Входная конц., мг/нм³": f"{tbo_calc_res['conc_so2_in']:.1f}",
+            "Требуемая η (≤50 мг/нм³)": f"{tbo_calc_res['eta_req_so2']:.1%}",
             "100% NaOH (теор), кг/ч": f"{tbo_calc_res['naoh_so2_theor']:.3f}",
             "100% NaOH (факт), кг/ч": f"{tbo_calc_res['naoh_so2_fact']:.3f}",
             "Суточный (100%), кг/сут": f"{tbo_calc_res['naoh_so2_fact']*hours_per_day:.1f}",
-            "ГОДОВОЙ (100%), т/год": f"{(tbo_calc_res['naoh_so2_fact']*annual_hours)/1000:.2f}",
-            "Удельный, г/кг": f"{(tbo_calc_res['naoh_so2_fact']/m_tbo*1000):.2f}"
+            "ГОДОВОЙ (100%), т/год": f"{(tbo_calc_res['naoh_so2_fact']*annual_hours)/1000:.2f}"
         },
         {
             "Компонент": "ИТОГО (ТБО 170 кг/ч)",
             "Стехиометрия": "Суммарный расход",
-            "Поступление элемента, кг/ч": "-",
+            "Поступление элемента, кг/ч": f"{(tbo_feed_res['mass_cl'] + tbo_feed_res['mass_s']):.4f}",
+            "Конверсия в газ (k_конв)": "-",
             "Масса в газе, кг/ч": f"{(tbo_feed_res['mass_hcl'] + tbo_feed_res['mass_so2']):.3f}",
+            "Входная конц., мг/нм³": "-",
+            "Требуемая η (≤10 мг/нм³)": "-",
             "100% NaOH (теор), кг/ч": f"{tbo_calc_res['naoh_total_theor']:.3f}",
             "100% NaOH (факт), кг/ч": f"{tbo_calc_res['naoh_total_fact']:.3f}",
             "Суточный (100%), кг/сут": f"{tbo_calc_res['naoh_pure_day_kg']:.1f}",
-            "ГОДОВОЙ (100%), т/год": f"{tbo_calc_res['naoh_pure_year_t']:.2f}",
-            "Удельный, г/кг": f"{tbo_calc_res['spec_naoh_pure_g_per_kg']:.1f}"
+            "ГОДОВОЙ (100%), т/год": f"{tbo_calc_res['naoh_pure_year_t']:.2f}"
         }
     ])
     st.dataframe(df_tbo_table, use_container_width=True, hide_index=True)
+
 
 # ------------------------------------------------------------------------------
 # ВКЛАДКА 3: СВОДНАЯ ВЕДОМОСТЬ И СРАВНЕНИЕ
@@ -517,12 +531,13 @@ with tab3:
         'flue_gas_flow_tbo': flue_gas_flow_tbo,
         'flue_gas_flow': flue_gas_flow,
         'k_conv_cl_liq': k_conv_cl_liq,
+
         'k_conv_s_liq': k_conv_s_liq,
         'k_conv_cl_tbo': k_conv_cl_tbo,
         'k_conv_s_tbo': k_conv_s_tbo,
-        'k_conv_c': k_conv_c,
         'final_results': final_results
     }
+
     
     # === БЛОК COMPLIANCE ПО ИТС 9-2020 ДЛЯ ОБЕИХ УСТАНОВОК ===
     st.subheader("🛡️ Проверка compliance по ИТС 9-2020 (Приложение В)")

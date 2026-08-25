@@ -198,8 +198,7 @@ def calculate_tbo_pollutants(
     morphology_dict: Dict[str, float] = None,
     custom_elements: Dict[str, float] = None,
     k_conv_cl: float = 0.85,
-    k_conv_s: float = 0.80,
-    k_conv_c: float = 0.98
+    k_conv_s: float = 0.80
 ) -> Dict[str, Any]:
     """
     Расчет поступления Cl, S и выхода газов HCl, SO2 из ТБО.
@@ -273,9 +272,9 @@ def calculate_tbo_pollutants(
         "mass_so2": mass_so2,
         "breakdown_table": breakdown_table,
         "k_conv_cl": k_conv_cl,
-        "k_conv_s": k_conv_s,
-        "k_conv_c": k_conv_c
+        "k_conv_s": k_conv_s
     }
+
 
 
 
@@ -289,6 +288,8 @@ def calculate_single_stream_consumption(
     feed_cl: float,
     feed_s: float,
     feed_mass_kg_h: float,
+    k_conv_cl: float = 1.0,
+    k_conv_s: float = 1.0,
     flue_gas_flow: float = 3000.0,
     k_excess: float = 1.15,
     limit_hcl: float = 10.0,
@@ -353,6 +354,8 @@ def calculate_single_stream_consumption(
         "feed_mass_kg_h": feed_mass_kg_h,
         "feed_cl": feed_cl,
         "feed_s": feed_s,
+        "k_conv_cl": k_conv_cl,
+        "k_conv_s": k_conv_s,
         
         "mass_hcl_gas": mass_hcl_gas,
         "mass_so2_gas": mass_so2_gas,
@@ -417,6 +420,8 @@ def calculate_liquid_installation_naoh(
         feed_cl=liquid_results["mass_cl"],
         feed_s=liquid_results["mass_s"],
         feed_mass_kg_h=feed_mass,
+        k_conv_cl=liquid_results.get("k_conv_cl", 0.95),
+        k_conv_s=liquid_results.get("k_conv_s", 0.85),
         flue_gas_flow=flue_gas_flow,
         k_excess=k_excess,
         eta_scrubber=eta_scrubber,
@@ -448,6 +453,8 @@ def calculate_tbo_installation_naoh(
         feed_cl=tbo_results["mass_cl"],
         feed_s=tbo_results["mass_s"],
         feed_mass_kg_h=feed_mass,
+        k_conv_cl=tbo_results.get("k_conv_cl", 0.85),
+        k_conv_s=tbo_results.get("k_conv_s", 0.80),
         flue_gas_flow=flue_gas_flow,
         k_excess=k_excess,
         eta_scrubber=eta_scrubber,
@@ -457,6 +464,7 @@ def calculate_tbo_installation_naoh(
     )
     res["m_tbo"] = tbo_results["m_tbo"]
     return res
+
 
 
 def calculate_combined_installations_naoh(

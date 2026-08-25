@@ -255,7 +255,7 @@ def generate_word_report(
     k_c_s_liq = params.get('k_conv_s_liq', params.get('k_conv_s', 0.85))
     k_c_cl_tbo = params.get('k_conv_cl_tbo', params.get('k_conv_cl', 0.85))
     k_c_s_tbo = params.get('k_conv_s_tbo', params.get('k_conv_s', 0.80))
-    k_c_c = params.get('k_conv_c', 0.98)
+
     
     # 1.1 Состав жидких отходов
     doc.add_heading("1.1. Состав жидких отходов (КТОЖС, 1,5 м³/ч)", level=2)
@@ -273,8 +273,9 @@ def generate_word_report(
         f"• Производительность: M_ТБО = {params['m_tbo']} кг/ч (теплота сгорания: {params['calorific_value']} ккал/кг);\n"
         f"• Средневзвешенное содержание элементов в смеси: Cl = {tbo_feed['avg_pct_cl']:.3f}%, S = {tbo_feed['avg_pct_s']:.3f}%;\n"
         f"• Поступление кислотообразующих элементов: Cl = {tbo_feed['mass_cl']:.4f} кг/ч, S = {tbo_feed['mass_s']:.4f} кг/ч;\n"
-        f"• Коэффициенты конверсии в кислые газы (при 1100 °C): k_конв,Cl = {k_c_cl_tbo:.2f} (Cl → HCl), k_конв,S = {k_c_s_tbo:.2f} (S → SO₂), k_конв,C = {k_c_c:.2f} (C → CO₂)."
+        f"• Коэффициенты конверсии в кислые газы (при 1100 °C): k_конв,Cl = {k_c_cl_tbo:.2f} (Cl → HCl), k_конв,S = {k_c_s_tbo:.2f} (S → SO₂)."
     )
+
     
     if "breakdown_table" in tbo_feed and tbo_feed["breakdown_table"]:
         b_list = tbo_feed["breakdown_table"]
@@ -688,7 +689,7 @@ def generate_pdf_report(
     k_c_s_liq = params.get('k_conv_s_liq', params.get('k_conv_s', 0.85))
     k_c_cl_tbo = params.get('k_conv_cl_tbo', params.get('k_conv_cl', 0.85))
     k_c_s_tbo = params.get('k_conv_s_tbo', params.get('k_conv_s', 0.80))
-    k_c_c = params.get('k_conv_c', 0.98)
+
     
     # 1.1 Жидкие отходы
     pdf.set_font(font_name, "B", 9.5)
@@ -712,7 +713,8 @@ def generate_pdf_report(
     pdf.multi_cell(0, 4.2, f"• Производительность: M_ТБО = {params['m_tbo']} кг/ч (теплота сгорания: {params['calorific_value']} ккал/кг);\n"
                           f"• Средневзвешенное содержание элементов в смеси: Cl = {tbo_feed['avg_pct_cl']:.3f}%, S = {tbo_feed['avg_pct_s']:.3f}%;\n"
                           f"• Поступление кислотообразующих элементов: Cl = {tbo_feed['mass_cl']:.4f} кг/ч, S = {tbo_feed['mass_s']:.4f} кг/ч;\n"
-                          f"• Коэффициенты конверсии в кислые газы (при 1100 °C): k_конв,Cl = {k_c_cl_tbo:.2f} (Cl -> HCl), k_конв,S = {k_c_s_tbo:.2f} (S -> SO2), k_конв,C = {k_c_c:.2f} (C -> CO2).")
+                          f"• Коэффициенты конверсии в кислые газы (при 1100 °C): k_конв,Cl = {k_c_cl_tbo:.2f} (Cl -> HCl), k_конв,S = {k_c_s_tbo:.2f} (S -> SO2).")
+
     pdf.ln(2)
     
     # Таблица морфологии ТБО
