@@ -332,10 +332,13 @@ def calculate_single_stream_consumption(
     naoh_so2_theor = mass_so2_neut * stoich_so2
     naoh_total_theor = naoh_hcl_theor + naoh_so2_theor
     
-    # 6. Фактический часовой расход 100% NaOH с учетом коэффициента избытка k_изб (кг/ч)
-    naoh_hcl_fact = naoh_hcl_theor * k_excess
-    naoh_so2_fact = naoh_so2_theor * k_excess
+    # 6. Фактический часовой расход 100% NaOH с учетом эффективности скруббера и коэффициента избытка (кг/ч)
+    # Чем выше паспортная эффективность скруббера (η_скр), тем выше полезное использование NaOH и МЕНЬШЕ расход реагента
+    k_eff = (k_excess / eta_scrubber) if eta_scrubber > 0 else k_excess
+    naoh_hcl_fact = naoh_hcl_theor * k_eff
+    naoh_so2_fact = naoh_so2_theor * k_eff
     naoh_total_fact = naoh_hcl_fact + naoh_so2_fact
+
 
 
 
@@ -594,9 +597,11 @@ def calculate_naoh_and_compliance(
     naoh_so2_theor = mass_so2_neut_total * stoich_so2
     naoh_total_theor = naoh_hcl_theor + naoh_so2_theor
     
-    naoh_hcl_fact = naoh_hcl_theor * k_excess
-    naoh_so2_fact = naoh_so2_theor * k_excess
+    k_eff = (k_excess / eta_scrubber) if eta_scrubber > 0 else k_excess
+    naoh_hcl_fact = naoh_hcl_theor * k_eff
+    naoh_so2_fact = naoh_so2_theor * k_eff
     naoh_total_fact = naoh_hcl_fact + naoh_so2_fact
+
 
 
 
