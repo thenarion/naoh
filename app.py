@@ -87,7 +87,7 @@ st.markdown("""
 
 # Заголовок
 st.markdown('<div class="main-header">🧪 Расчет расхода чистого 100% NaOH в скрубберах газоочистки</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-header">Раздельные расчеты для Установки жидких отходов (1,5 м³/ч) и Установки ТБО (170 кг/ч) • Проверка нормативов ИТС 9-2020</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-header">Раздельные расчеты для Установки жидких отходов (1,5 м³/ч) и Установки ТБО (170 кг/ч)</div>', unsafe_allow_html=True)
 
 # ==============================================================================
 # SIDEBAR: РЕЖИМ РАБОТЫ, СМЕНЫ И ТЕХНОЛОГИЧЕСКИЕ ПАРАМЕТРЫ
@@ -98,7 +98,7 @@ st.sidebar.subheader("Дымовые газы")
 flue_gas_flow = st.sidebar.number_input(
     "Расход дымовых газов, нм³/ч",
     min_value=100.0, max_value=50000.0, value=3000.0, step=100.0,
-    help="Необходим для пересчета кг/ч в мг/нм³ и проверки нормативов ИТС 9-2020"
+    help="Определяет объем газов, в котором рассчитываются концентрации загрязнителей. Расход NaOH рассчитывается напрямую для достижения нормативов ИТС 9-2020 (HCl ≤ 10 мг/нм³, SO₂ ≤ 50 мг/нм³)"
 )
 
 with st.sidebar.expander("⏱️ График эксплуатации и простои", expanded=True):
@@ -119,15 +119,15 @@ with st.sidebar.expander("⏱️ График эксплуатации и про
 
 with st.sidebar.expander("🏭 Параметры скруббера", expanded=True):
     eta_scrubber = st.slider(
-        "Эффективность скруббера (η)",
+        "Паспортная эффективность скруббера (η)",
         min_value=0.85, max_value=0.99, value=0.95, step=0.01,
-        help="Степень улавливания кислых газов HCl и SO₂ (типовое 0.95)"
+        help="Паспортная/номинальная степень очистки скруббера (проверяется на достаточность для ПДК ИТС 9-2020)"
     )
     
     k_excess = st.slider(
         "Коэффициент избытка NaOH (k_изб)",
         min_value=1.00, max_value=1.40, value=1.15, step=0.05,
-        help="Запас щелочи для поддержания щелочного pH скрубберной жидкости"
+        help="Технологический запас щелочи для поддержания pH скрубберной жидкости"
     )
 
 with st.sidebar.expander("🔥 Конверсия при 1100 °C", expanded=True):
@@ -138,6 +138,10 @@ with st.sidebar.expander("🔥 Конверсия при 1100 °C", expanded=Tru
     k_conv_s_tbo = st.slider("Доля S → SO₂ (ТБО)", 0.0, 1.0, 0.80, 0.01, help="Степень перехода S в SO₂ для ТБО (с учетом связывания CaSO₄ в золе)")
     k_conv_c = st.slider("Доля C → CO₂", 0.0, 1.0, 0.98, 0.01, help="Степень полного окисления углерода в CO₂")
 
+# Предварительная оценка общего потока отходов для пропорционального распределения газов
+q_liq_init = st.session_state.get('liq_q_flow', 1.5)
+m_tbo_init = st.session_state.get('tbo_m_input', 170.0)
+total_feed_mass_est = (q_liq_init * 1000.0) + m_tbo_init
 
 # ==============================================================================
 # ОСНОВНЫЕ ВКЛАДКИ
@@ -221,13 +225,15 @@ with tab1:
         active_liq_feed = calculate_liquid_waste_pollutants(q_liq, active_c_cl, active_c_so4, k_conv_cl_liq, k_conv_s_liq, dataset_name="Пользовательский")
         active_liq_title = "Пользовательский набор"
 
-    # Отдельный расчет расхода чистого 100% NaOH
+    # Отдельный расчет расхода чистого 100% NaOH на соблюдение нормативов ИТС 9-2020
     liq_calc_res = calculate_liquid_installation_naoh(
         liquid_results=active_liq_feed,
-        eta_scrubber=eta_scrubber,
+        flue_gas_flow=flue_gas_flow,
         k_excess=k_excess,
+        eta_scrubber=eta_scrubber,
         hours_per_day=hours_per_day,
-        operating_days_year=operating_days_year
+        operating_days_year=operating_days_year,
+        total_feed_mass=total_feed_mass_est
     )
     
     st.markdown("---")
@@ -380,13 +386,15 @@ with tab2:
         tbo_feed_res = calculate_tbo_pollutants(m_tbo, morphology_dict=user_morph, k_conv_cl=k_conv_cl_tbo, k_conv_s=k_conv_s_tbo, k_conv_c=k_conv_c)
 
 
-    # Отдельный расчет расхода чистого 100% NaOH для Установки ТБО
+    # Отдельный расчет расхода чистого 100% NaOH для Установки ТБО на соблюдение нормативов ИТС 9-2020
     tbo_calc_res = calculate_tbo_installation_naoh(
         tbo_results=tbo_feed_res,
-        eta_scrubber=eta_scrubber,
+        flue_gas_flow=flue_gas_flow,
         k_excess=k_excess,
+        eta_scrubber=eta_scrubber,
         hours_per_day=hours_per_day,
-        operating_days_year=operating_days_year
+        operating_days_year=operating_days_year,
+        total_feed_mass=total_feed_mass_est
     )
     
     st.markdown("---")
